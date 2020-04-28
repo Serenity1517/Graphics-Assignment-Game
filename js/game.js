@@ -7,6 +7,7 @@ var Colors = {
     pink:0xF5986E,
     yellow:0xf4ce93,
     blue:0x68c3c0,
+    silver:0x808080,
 };
 // useful vars
 var game;
@@ -16,6 +17,9 @@ var oldTime = new Date().getTime();
 var ennemiesPool = [];
 var particlesPool = [];
 var particlesInUse = [];
+var bulletsInUse = [];
+
+//const shooter = document.getElementById("player-controlled-shooter")   
 
 function resetGame(){
   game = {
@@ -52,6 +56,8 @@ function resetGame(){
 
           planeCollisionDisplacementY:0,
           planeCollisionSpeedY:0,
+
+          bulletSpeed:100,
 
           seaRadius:600,
           seaLength:800,
@@ -135,8 +141,8 @@ function createScene() {
   //*/
 }
 
-// MOUSE AND SCREEN EVENTS
-
+// MOUSE, KEY AND SCREEN EVENTS
+      
 function handleWindowResize() {
   HEIGHT = window.innerHeight;
   WIDTH = window.innerWidth;
@@ -153,8 +159,8 @@ function handleMouseMove(event) {
 
 function handleTouchMove(event) {
     event.preventDefault();
-    var tx = -1 + (event.touches[0].pageX / WIDTH)*2;
-    var ty = 1 - (event.touches[0].pageY / HEIGHT)*2;
+    var tx =  (event.touches[0].pageX / WIDTH)*2;
+    var ty =  (event.touches[0].pageY / HEIGHT)*2;
     mousePos = {x:tx, y:ty};
 }
 
@@ -173,6 +179,15 @@ function handleTouchEnd(event){
   }
 }
 
+function handleSpacebar(event){
+  if (game.status == "waitingReplay"){
+    resetGame();
+    hideReplay();
+  }
+  else if(game.status == "playing"){
+    createBullet();
+  }
+}
 // LIGHTS
 
 var ambientLight, hemisphereLight, shadowLight;
@@ -292,6 +307,71 @@ Pilot.prototype.updateHairs = function(){
    }
   this.angleHairs += game.speed*deltaTime*40;
   //*/
+}
+
+
+Bullet = function(){
+    this.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial( {color: Colors.silver} ));
+}
+
+function createBullet(){
+  var newBullet = new Bullet();
+  newBullet.mesh.position.copy(airplane.propeller.getWorldPosition());
+  bulletsInUse.push(newBullet);
+  scene.add(newBullet.mesh);
+}
+
+function updateBullet(){
+  game.planeSpeed = normalize(mousePos.x,-.5,.5,game.planeMinSpeed, game.planeMaxSpeed);
+  var targetY = normalize(mousePos.y,-.75,.75, game.planeDefaultHeight-game.planeAmpHeight, game.planeDefaultHeight+game.planeAmpHeight);
+  var targetX = normalize(mousePos.x,-1,1,-game.planeAmpWidth*0.7, -game.planeAmpWidth);
+
+  //var bulletY = normalize();
+  game.planeCollisionDisplacementX += game.planeCollisionSpeedX;
+  targetX += game.planeCollisionDisplacementX;
+
+
+  game.planeCollisionDisplacementY += game.planeCollisionSpeedY;
+  targetY += game.planeCollisionDisplacementY;
+
+  airplane.mesh.position.y += (targetY-airplane.mesh.position.y)*deltaTime*game.planeMoveSensivity;
+  airplane.mesh.position.x += (targetX-airplane.mesh.position.x)*deltaTime*game.planeMoveSensivity;
+
+  airplane.mesh.rotation.z = (targetY-airplane.mesh.position.y)*deltaTime*game.planeRotXSensivity;
+  airplane.mesh.rotation.x = (airplane.mesh.position.y-targetY)*deltaTime*game.planeRotZSensivity;
+  //var targetCameraZ = normalize(game.planeSpeed, game.planeMinSpeed, game.planeMaxSpeed, game.cameraNearPos, game.cameraFarPos);
+  //camera.fov = normalize(mousePos.x,-1,1,40, 80);
+  //camera.updateProjectionMatrix ()
+  //camera.position.y += (airplane.mesh.position.y - camera.position.y)*deltaTime*game.cameraSensivity;
+
+  game.planeCollisionSpeedX += (0-game.planeCollisionSpeedX)*deltaTime * 0.03;
+  game.planeCollisionDisplacementX += (0-game.planeCollisionDisplacementX)*deltaTime *0.01;
+  game.planeCollisionSpeedY += (0-game.planeCollisionSpeedY)*deltaTime * 0.03;
+  game.planeCollisionDisplacementY += (0-game.planeCollisionDisplacementY)*deltaTime *0.01;
+
+}
+function moveBullet(bullet){
+    let interval = setInterval(() => {
+    let xPosition = parseInt(bullet.style.left)
+    
+    for (var i=0; i<this.ennemiesInUse.length; i++){
+      var ennemy = this.ennemiesInUse[i];
+      var diffPos = bullet.clone().sub(ennemy.mesh.position.clone());
+      var d = diffPos.length();
+      if (d<game.ennemyDistanceTolerance){
+        particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
+        ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
+        this.mesh.remove(ennemy.mesh);
+
+        removeEnergy();
+        i--;
+      }
+      else{
+
+      }
+    }
+  }, 10)
+
 }
 
 var AirPlane = function(){
@@ -439,7 +519,7 @@ var AirPlane = function(){
 
 };
 
-Sky = function(){
+Sky = function() {
   this.mesh = new THREE.Object3D();
   this.nClouds = 20;
   this.clouds = [];
@@ -582,7 +662,7 @@ EnnemiesHolder.prototype.spawnEnnemies = function(){
     }
 
     ennemy.angle = - (i*0.1);
-    ennemy.distance = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
+    ennemy.distance = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * game.planeAmpHeight;
     ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
     ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
 
@@ -706,7 +786,7 @@ CoinsHolder = function (nCoins){
 CoinsHolder.prototype.spawnCoins = function(){
 
   var nCoins = 1 + Math.floor(Math.random()*10);
-  var d = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
+  var d = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * game.planeAmpHeight;
   var amplitude = 10 + Math.round(Math.random()*10);
   for (var i=0; i<nCoins; i++){
     var coin;
@@ -815,6 +895,7 @@ function loop(){
       coinsHolder.spawnCoins();
     }
 
+    // Add speed to the airplane
     if (Math.floor(game.distance)%game.distanceForSpeedUpdate == 0 && Math.floor(game.distance) > game.speedLastUpdate){
       game.speedLastUpdate = Math.floor(game.distance);
       game.targetBaseSpeed += game.incrementSpeedByTime*deltaTime;
@@ -913,12 +994,11 @@ function removeEnergy(){
 }
 
 
-
 function updatePlane(){
 
   game.planeSpeed = normalize(mousePos.x,-.5,.5,game.planeMinSpeed, game.planeMaxSpeed);
-  var targetY = normalize(mousePos.y,-.75,.75,game.planeDefaultHeight-game.planeAmpHeight, game.planeDefaultHeight+game.planeAmpHeight);
-  var targetX = normalize(mousePos.x,-1,1,-game.planeAmpWidth*.7, -game.planeAmpWidth);
+  var targetY = normalize(mousePos.y,-.75,.75, game.planeDefaultHeight-game.planeAmpHeight, game.planeDefaultHeight+game.planeAmpHeight);
+  var targetX = normalize(mousePos.x,-1,1,-game.planeAmpWidth*0.7, -game.planeAmpWidth);
 
   game.planeCollisionDisplacementX += game.planeCollisionSpeedX;
   targetX += game.planeCollisionDisplacementX;
@@ -954,7 +1034,7 @@ function hideReplay(){
 }
 
 function normalize(v,vmin,vmax,tmin, tmax){
-  var nv = Math.max(Math.min(v,vmax), vmin);
+  var nv = Math.max(Math.min(v,vmax), vmin);  //normalizing the X/Y position of mouse by constraining it between vmin and vmax
   var dv = vmax-vmin;
   var pc = (nv-vmin)/dv;
   var dt = tmax-tmin;
@@ -989,6 +1069,7 @@ function init(event){
   document.addEventListener('touchmove', handleTouchMove, false);
   document.addEventListener('mouseup', handleMouseUp, false);
   document.addEventListener('touchend', handleTouchEnd, false);
+  document.addEventListener('spacebar', handleSpacebar, false);
 
   loop();
 }
