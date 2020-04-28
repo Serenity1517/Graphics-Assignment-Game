@@ -12,6 +12,7 @@ var Colors = {
 // useful vars
 var game;
 var deltaTime = 0;
+var canFireBullet = 1;
 var newTime = new Date().getTime();
 var oldTime = new Date().getTime();
 var ennemiesPool = [];
@@ -157,13 +158,6 @@ function handleMouseMove(event) {
   mousePos = {x:tx, y:ty};
 }
 
-function handleTouchMove(event) {
-    event.preventDefault();
-    var tx =  (event.touches[0].pageX / WIDTH)*2;
-    var ty =  (event.touches[0].pageY / HEIGHT)*2;
-    mousePos = {x:tx, y:ty};
-}
-
 function handleMouseUp(event){
   if (game.status == "waitingReplay"){
     resetGame();
@@ -171,23 +165,25 @@ function handleMouseUp(event){
   }
 }
 
-
-function handleTouchEnd(event){
-  if (game.status == "waitingReplay"){
-    resetGame();
-    hideReplay();
-  }
-}
-
-function handleSpacebar(event){
+function handleKeyDown(event){
   if (game.status == "waitingReplay"){
     resetGame();
     hideReplay();
   }
   else if(game.status == "playing"){
-    createBullet();
+    if(canFireBullet == 1 && event.key == "x"){
+      createBullet();
+      //console.log("\nheree");
+      canFireBullet = 0;
+    }
   }
 }
+
+function handleKeyUp(event){
+  if(event.key == "x")
+    canFireBullet = 1;
+}
+
 // LIGHTS
 
 var ambientLight, hemisphereLight, shadowLight;
@@ -317,61 +313,53 @@ Bullet = function(){
 function createBullet(){
   var newBullet = new Bullet();
   newBullet.mesh.position.copy(airplane.propeller.getWorldPosition());
+  console.log("\nAirplane position : " + airplane.propeller.getWorldPosition().x);
+  console.log("\nnew BUllet position : " + newBullet.mesh.position.x);
   bulletsInUse.push(newBullet);
   scene.add(newBullet.mesh);
 }
 
 function updateBullet(){
-  game.planeSpeed = normalize(mousePos.x,-.5,.5,game.planeMinSpeed, game.planeMaxSpeed);
-  var targetY = normalize(mousePos.y,-.75,.75, game.planeDefaultHeight-game.planeAmpHeight, game.planeDefaultHeight+game.planeAmpHeight);
-  var targetX = normalize(mousePos.x,-1,1,-game.planeAmpWidth*0.7, -game.planeAmpWidth);
+  
+  for(var i=0; i<bulletsInUse.length;i++){
+    var bullet = bulletsInUse[i];
+    bulletsInUse[i].mesh.position.x += 0.1;
 
-  //var bulletY = normalize();
-  game.planeCollisionDisplacementX += game.planeCollisionSpeedX;
-  targetX += game.planeCollisionDisplacementX;
+    for (var j=0; j<ennemiesHolder.ennemiesInUse.length; j++){
+        var ennemy = ennemiesHolder.ennemiesInUse[j];
+        var position_diff = bullet.mesh.position.clone().sub(ennemy.mesh.position.clone());
+        var diff = position_diff.length();
+        if (diff<game.ennemyDistanceTolerance){
+          particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
+          ennemiesPool.unshift(ennemiesHolder.ennemiesInUse.splice(i,1)[0]);
+          ennemiesHolder.mesh.remove(ennemy.mesh);
+          bulletsInUse.unshift(bulletsInUse.splice(i,1));
+        }
+        else{
 
-
-  game.planeCollisionDisplacementY += game.planeCollisionSpeedY;
-  targetY += game.planeCollisionDisplacementY;
-
-  airplane.mesh.position.y += (targetY-airplane.mesh.position.y)*deltaTime*game.planeMoveSensivity;
-  airplane.mesh.position.x += (targetX-airplane.mesh.position.x)*deltaTime*game.planeMoveSensivity;
-
-  airplane.mesh.rotation.z = (targetY-airplane.mesh.position.y)*deltaTime*game.planeRotXSensivity;
-  airplane.mesh.rotation.x = (airplane.mesh.position.y-targetY)*deltaTime*game.planeRotZSensivity;
-  //var targetCameraZ = normalize(game.planeSpeed, game.planeMinSpeed, game.planeMaxSpeed, game.cameraNearPos, game.cameraFarPos);
-  //camera.fov = normalize(mousePos.x,-1,1,40, 80);
-  //camera.updateProjectionMatrix ()
-  //camera.position.y += (airplane.mesh.position.y - camera.position.y)*deltaTime*game.cameraSensivity;
-
-  game.planeCollisionSpeedX += (0-game.planeCollisionSpeedX)*deltaTime * 0.03;
-  game.planeCollisionDisplacementX += (0-game.planeCollisionDisplacementX)*deltaTime *0.01;
-  game.planeCollisionSpeedY += (0-game.planeCollisionSpeedY)*deltaTime * 0.03;
-  game.planeCollisionDisplacementY += (0-game.planeCollisionDisplacementY)*deltaTime *0.01;
-
-}
-function moveBullet(bullet){
-    let interval = setInterval(() => {
-    let xPosition = parseInt(bullet.style.left)
-    
-    for (var i=0; i<this.ennemiesInUse.length; i++){
-      var ennemy = this.ennemiesInUse[i];
-      var diffPos = bullet.clone().sub(ennemy.mesh.position.clone());
-      var d = diffPos.length();
-      if (d<game.ennemyDistanceTolerance){
-        particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
-        ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-        this.mesh.remove(ennemy.mesh);
-
-        removeEnergy();
-        i--;
-      }
-      else{
-
-      }
+        }
     }
-  }, 10)
+  }
 
+  // game.planeSpeed = normalize(mousePos.x,-.5,.5,game.planeMinSpeed, game.planeMaxSpeed);
+  // var targetY = normalize(mousePos.y,-.75,.75, game.planeDefaultHeight-game.planeAmpHeight, game.planeDefaultHeight+game.planeAmpHeight);
+  // var targetX = normalize(mousePos.x,-1,1,-game.planeAmpWidth*0.7, -game.planeAmpWidth);
+
+  // //var bulletY = normalize();
+  // game.planeCollisionDisplacementX += game.planeCollisionSpeedX;
+  // targetX += game.planeCollisionDisplacementX;
+
+
+  // game.planeCollisionDisplacementY += game.planeCollisionSpeedY;
+  // targetY += game.planeCollisionDisplacementY;
+
+
+
+  // airplane.mesh.position.y += (targetY-airplane.mesh.position.y)*deltaTime*game.planeMoveSensivity;
+  // airplane.mesh.position.x += (targetX-airplane.mesh.position.x)*deltaTime*game.planeMoveSensivity;
+
+  // airplane.mesh.rotation.z = (targetY-airplane.mesh.position.y)*deltaTime*game.planeRotXSensivity;
+  // airplane.mesh.rotation.x = (airplane.mesh.position.y-targetY)*deltaTime*game.planeRotZSensivity;
 }
 
 var AirPlane = function(){
@@ -559,13 +547,7 @@ Sea = function(){
   for (var i=0;i<l;i++){
     var v = geom.vertices[i];
     //v.y = Math.random()*30;
-    this.waves.push({y:v.y,
-                     x:v.x,
-                     z:v.z,
-                     ang:Math.random()*Math.PI*2,
-                     amp:game.wavesMinAmp + Math.random()*(game.wavesMaxAmp-game.wavesMinAmp),
-                     speed:game.wavesMinSpeed + Math.random()*(game.wavesMaxSpeed - game.wavesMinSpeed)
-                    });
+    this.waves.push({y:v.y, x:v.x, z:v.z, ang:Math.random()*Math.PI*2, amp:game.wavesMinAmp + Math.random()*(game.wavesMaxAmp-game.wavesMinAmp), speed:game.wavesMinSpeed + Math.random()*(game.wavesMaxSpeed - game.wavesMinSpeed)});
   };
   var mat = new THREE.MeshPhongMaterial({
     color:Colors.blue,
@@ -599,7 +581,7 @@ Cloud = function(){
   this.mesh.name = "cloud";
   var geom = new THREE.CubeGeometry(20,20,20);
   var mat = new THREE.MeshPhongMaterial({
-    color:Colors.white,
+    color:Colors.silver,
 
   });
 
@@ -919,6 +901,7 @@ function loop(){
     updatePlane();
     updateDistance();
     updateEnergy();
+    updateBullet();
     game.baseSpeed += (game.targetBaseSpeed - game.baseSpeed) * deltaTime * 0.02;
     game.speed = game.baseSpeed * game.planeSpeed;
 
@@ -1066,10 +1049,9 @@ function init(event){
   createParticles();
 
   document.addEventListener('mousemove', handleMouseMove, false);
-  document.addEventListener('touchmove', handleTouchMove, false);
-  document.addEventListener('mouseup', handleMouseUp, false);
-  document.addEventListener('touchend', handleTouchEnd, false);
-  document.addEventListener('spacebar', handleSpacebar, false);
+  document.addEventListener('mouseup', handleMouseUp, false); 
+  document.addEventListener('keyup', handleKeyUp, false);
+  document.addEventListener('keydown', handleKeyDown, false);
 
   loop();
 }
