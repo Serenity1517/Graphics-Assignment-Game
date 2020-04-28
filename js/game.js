@@ -322,8 +322,9 @@ function createBullet(){
 function updateBullet(){
   
   for(var i=0; i<bulletsInUse.length;i++){
+    console.log("\nLength of bull arr " + bulletsInUse.length);
     var bullet = bulletsInUse[i];
-    bulletsInUse[i].mesh.position.x += 0.1;
+    bulletsInUse[i].mesh.position.x += 0.9;
 
     for (var j=0; j<ennemiesHolder.ennemiesInUse.length; j++){
         var ennemy = ennemiesHolder.ennemiesInUse[j];
