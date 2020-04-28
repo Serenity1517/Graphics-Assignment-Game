@@ -9,11 +9,11 @@
 		
 	</head>
 	<body>
-		<div class="game-holder" id="gameHolder">
+		<div class="mainClass" id="mainClass">
 			
-			<div class = "leftSideParamters"><!-- This part will contain the level and score -->
+			<div class = "rightSideParamters"><!-- This part will contain the level and score -->
 				<div class="scoring_details" id="level">
-					<div class="score__label">level</div>
+					<div class="score_format">level</div>
 					<div class="score__value score__value--level" id="levelValue">1</div>
 					<svg class="level-circle" id="levelCircle" viewbox="0 0 200 200">
 						<circle id="levelCircleBgr" r="80" cx="100" cy="100" fill="none" stroke="#d1b790" stroke-width="24px" />
@@ -21,21 +21,21 @@
 					</svg>
 				</div>
 				<div class="scoring_details" id="dist">
-					<div class="score__label">Score</div>
+					<div class="score_format">Score</div>
 					<div class="score__value score__value--dist" id="distValue">000</div>
 				</div>
 			</div>
 
 			
-			<div class = "rightSideParameters"><!-- This part will contain the health bar and number of bullets -->
+			<div class = "leftSideParameters"><!-- This part will contain the health bar and number of bullets -->
 				<div class="scoring_details" id="energy">
-					<div class="score__label">energy</div>
+					<div class="score_format">energy</div>
 					<div class="score__value score__value--energy" id="energyValue">
 						<div class="energy-bar" id="energyBar"></div>
 					</div>
 				</div>
 				<div class="scoring_details" id="bullets">
-					<div class="score__label">bullets</div>
+					<div class="score_format">bullets</div>
 					<div class="score__value score__value--bullets" id="bulletCount">2</div>
 					<svg class="level-circle" id="bulletCircle" viewbox="0 0 200 200">
 						<circle id="bulletCircleBgr" r="80" cx="100" cy="100" fill="none" stroke="#d1b790" stroke-width="24px" />
@@ -44,11 +44,11 @@
 			</div>
 
 	        <div class="gameNameHeading">  <!-- This part will contain game name -->
-				<top>the</top>Udankhatola
+				<top>The</top>Udankhatola
 			</div>
 
-			<div class="world" id="world"></div>
-			<div class="message message--replay" id="replayMessage">Click to Replay</div>
+			<div class="mainScene" id="mainScene"></div>
+			<div class="message replay_msg" id="replayMessage">Click or Press any key to Replay</div>
 			<div class="message message--instructions" id="instructions">Grab the blue pills<span>avoid the red ones</span></div>
 		</div>
 	</body>

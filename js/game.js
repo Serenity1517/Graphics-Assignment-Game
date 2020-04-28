@@ -73,7 +73,7 @@ function resetGame(){
           cameraSensivity:0.002,
 
           coinDistanceTolerance:15,
-          coinValue:10,
+          coinValue:3,
           coinsSpeed:.5,
           coinLastSpawn:0,
           distanceForCoinsSpawn:100,
@@ -129,7 +129,7 @@ function createScene() {
 
   renderer.shadowMap.enabled = true;
 
-  container = document.getElementById('world');
+  container = document.getElementById('mainScene');
   container.appendChild(renderer.domElement);
 
   window.addEventListener('resize', handleWindowResize, false);
