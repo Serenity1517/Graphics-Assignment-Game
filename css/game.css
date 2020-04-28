@@ -13,22 +13,49 @@
 	height: 100%;
 }
 
-.header {
+/*This container contains the style sheet for the name of the game*/
+.gameNameHeading {
 	position: absolute;
-	top: 8vh;
+	top: 10;
 	left: 0;
 	width: 100%;
 	text-align: center;
 	pointer-events: none;
+	color: #1c067e;
+	font-family: 'cursive';
+	font-style: bold;
+	font-size: 2.3em;
+	letter-spacing: -0.03em;
 }
 
-.header h1 {
-	font-family: 'Arial';
-	font-size: 4em;
-	line-height: 1;
-	margin: 0;
-	letter-spacing: -0.025em;
-	color: #39f10b;
+/*Style sheet for writing 'the'*/
+.gameNameHeading top{
+	font-style: italic;
+	color: #3a23a0;
+	display: block;
+	letter-spacing: 0px;
+	font-family: 'fantasy';	
+	font-size: 0.75em;
+	left: 0;
+	top: 0;
+}
+
+/*This container contains the style sheet for current level and score*/
+.leftSideParamters {
+	position: absolute;
+	right: 50;
+	top: 6vh;
+	text-align: center;
+	pointer-events: none;
+}
+
+/*This container contains the style sheet for current number of bullets and Energy left.*/
+.rightSideParameters {
+	position: absolute;
+	left: 50;
+	top: 6vh;
+	text-align: center;
+	pointer-events: none;
 }
 
 .header h1 span {
@@ -49,27 +76,33 @@
 	color: #d6483b;
 }
 
-.score {
+/* .score {
 	width: 100%;
 	margin: 2em 0 0;
 	text-align: center;
 	white-space: nowrap;
-}
+} */
 
-.score__content {
+
+/*This stye sheet is for styling the Score-board and related details*/
+.scoring_details {
 	position: relative;
 	display: inline-block;
 	padding: 0 1em;
 	vertical-align: top;
 }
 
-.score__content:nth-child(2) {
-	border-right: 1px solid #d1b790;
-	border-left: 1px solid #d1b790;
+.scoring_details:nth-child(2) {
+	border-right: 1px solid #c258ab;
+	border-left: 1px solid #c258ab;
+}
+
+.scoring_details:nth-child(3){
+	border-right: 1px solid #c258ab;
 }
 
 .score__label {
-	font-size: 9px;
+	font-size: 15px;
 	position: relative;
 	margin: 0 0 0.5em 0;
 	text-align: center;
@@ -90,6 +123,10 @@
 
 .score__value--dist {
 	font-size: 30px;
+}
+
+.score__value--bullets {
+	font-size: 26px;
 }
 
 .level-circle {

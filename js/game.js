@@ -73,7 +73,7 @@ function resetGame(){
           cameraSensivity:0.002,
 
           coinDistanceTolerance:15,
-          coinValue:3,
+          coinValue:10,
           coinsSpeed:.5,
           coinLastSpawn:0,
           distanceForCoinsSpawn:100,
@@ -84,9 +84,11 @@ function resetGame(){
           ennemyLastSpawn:0,
           distanceForEnnemiesSpawn:50,
 
+          bulletCount:2,
           status : "playing",
          };
   fieldLevel.innerHTML = Math.floor(game.level);
+  bulletVal.innerHTML = Math.floor(game.bulletCount);
 }
 
 //THREEJS RELATED VARIABLES
@@ -307,24 +309,31 @@ Pilot.prototype.updateHairs = function(){
 
 
 Bullet = function(){
-    this.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial( {color: Colors.silver} ));
+    this.mesh = new THREE.Mesh(new THREE.SphereGeometry(2, 8, 8), new THREE.MeshBasicMaterial( {color: Colors.silver} ));
 }
 
 function createBullet(){
-  var newBullet = new Bullet();
-  newBullet.mesh.position.copy(airplane.propeller.getWorldPosition());
-  console.log("\nAirplane position : " + airplane.propeller.getWorldPosition().x);
-  console.log("\nnew BUllet position : " + newBullet.mesh.position.x);
-  bulletsInUse.push(newBullet);
-  scene.add(newBullet.mesh);
+  if(game.bulletCount > 0)
+  {
+    game.bulletCount--;
+    bulletVal.innerHTML = Math.floor(game.bulletCount);
+    var newBullet = new Bullet();
+    newBullet.mesh.position.copy(airplane.propeller.getWorldPosition());
+    console.log("\nAirplane position : " + airplane.propeller.getWorldPosition().x);
+    console.log("\nnew BUllet position : " + newBullet.mesh.position.x);
+    bulletsInUse.push(newBullet);
+    scene.add(newBullet.mesh);
+  }
+  
 }
 
 function updateBullet(){
   
   for(var i=0; i<bulletsInUse.length;i++){
-    console.log("\nLength of bull arr " + bulletsInUse.length);
+    console.log(bulletsInUse[i]);
+    //console.log(bulletsInUse[i].mesh.position.x + " " + i);
     var bullet = bulletsInUse[i];
-    bulletsInUse[i].mesh.position.x += 0.9;
+    bulletsInUse[i].mesh.position.x += 5;
 
     for (var j=0; j<ennemiesHolder.ennemiesInUse.length; j++){
         var ennemy = ennemiesHolder.ennemiesInUse[j];
@@ -332,35 +341,17 @@ function updateBullet(){
         var diff = position_diff.length();
         if (diff<game.ennemyDistanceTolerance){
           particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
-          ennemiesPool.unshift(ennemiesHolder.ennemiesInUse.splice(i,1)[0]);
+          ennemiesPool.unshift(ennemiesHolder.ennemiesInUse.splice(j,1)[0]);
           ennemiesHolder.mesh.remove(ennemy.mesh);
-          bulletsInUse.unshift(bulletsInUse.splice(i,1));
+          scene.remove(bulletsInUse[i].mesh);
+          bulletsInUse.splice(i,1);
+          game.distance += 100;
         }
         else{
 
         }
     }
   }
-
-  // game.planeSpeed = normalize(mousePos.x,-.5,.5,game.planeMinSpeed, game.planeMaxSpeed);
-  // var targetY = normalize(mousePos.y,-.75,.75, game.planeDefaultHeight-game.planeAmpHeight, game.planeDefaultHeight+game.planeAmpHeight);
-  // var targetX = normalize(mousePos.x,-1,1,-game.planeAmpWidth*0.7, -game.planeAmpWidth);
-
-  // //var bulletY = normalize();
-  // game.planeCollisionDisplacementX += game.planeCollisionSpeedX;
-  // targetX += game.planeCollisionDisplacementX;
-
-
-  // game.planeCollisionDisplacementY += game.planeCollisionSpeedY;
-  // targetY += game.planeCollisionDisplacementY;
-
-
-
-  // airplane.mesh.position.y += (targetY-airplane.mesh.position.y)*deltaTime*game.planeMoveSensivity;
-  // airplane.mesh.position.x += (targetX-airplane.mesh.position.x)*deltaTime*game.planeMoveSensivity;
-
-  // airplane.mesh.rotation.z = (targetY-airplane.mesh.position.y)*deltaTime*game.planeRotXSensivity;
-  // airplane.mesh.rotation.x = (airplane.mesh.position.y-targetY)*deltaTime*game.planeRotZSensivity;
 }
 
 var AirPlane = function(){
@@ -702,7 +693,7 @@ Particle = function(){
 Particle.prototype.explode = function(pos, color, scale){
   var _this = this;
   var _p = this.mesh.parent;
-  this.mesh.material.color = new THREE.Color( color);
+  this.mesh.material.color = new THREE.Color(color);
   this.mesh.material.needsUpdate = true;
   this.mesh.scale.set(scale, scale, scale);
   var targetX = pos.x + (-1 + Math.random()*2)*50;
@@ -894,7 +885,8 @@ function loop(){
       game.levelLastUpdate = Math.floor(game.distance);
       game.level++;
       fieldLevel.innerHTML = Math.floor(game.level);
-
+      game.bulletCount = game.level * 2;
+      bulletVal.innerHTML = Math.floor(game.bulletCount);
       game.targetBaseSpeed = game.initSpeed + game.incrementSpeedByLevel*game.level
     }
 
@@ -1026,7 +1018,7 @@ function normalize(v,vmin,vmax,tmin, tmax){
   return tv;
 }
 
-var fieldDistance, energyBar, replayMessage, fieldLevel, levelCircle;
+var fieldDistance, energyBar, replayMessage, fieldLevel, levelCircle, bulletVal;
 
 function init(event){
 
@@ -1036,6 +1028,7 @@ function init(event){
   energyBar = document.getElementById("energyBar");
   replayMessage = document.getElementById("replayMessage");
   fieldLevel = document.getElementById("levelValue");
+  bulletVal = document.getElementById("bulletCount");
   levelCircle = document.getElementById("levelCircleStroke");
 
   resetGame();
