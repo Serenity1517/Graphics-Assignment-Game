@@ -9,34 +9,39 @@
 		
 	</head>
 	<body>
-		<audio autoplay loop> <source src ="sounds/background.mp3" type ="audio/mpeg"> </audio>
+		<audio loop autoplay id ="backgroundMusic"><source src ="sounds/background.mp3" type="audio/mp3"> </audio>
+			<script>
+				var bckgrnd = document.getElementById("backgroundMusic");
+				bckgrnd.volume = 0.5;
+			</script>
 		<div class="mainClass" id="mainClass">
-			
+
+			<!-- This part will contain the level and score -->
 			<div class = "rightSideParamters"><!-- This part will contain the level and score -->
-				<div class="scoring_details" id="level">
-					<div class="score_format">level</div>
+				<div class="parameterDisplay" id="level">
+					<div class="parameterHeading">level</div>
 					<div class="score__value score__value--level" id="levelValue">1</div>
 					<svg class="level-circle" id="levelCircle" viewbox="0 0 200 200">
 						<circle id="levelCircleBgr" r="80" cx="100" cy="100" fill="none" stroke="#d1b790" stroke-width="24px" />
 						<circle id="levelCircleStroke" r="80" cx="100" cy="100" fill="none" #f25346 stroke="#68c3c0" stroke-width="14px" stroke-dasharray="502" />
 					</svg>
 				</div>
-				<div class="scoring_details" id="dist">
-					<div class="score_format">Score</div>
+				<div class="parameterDisplay" id="dist">
+					<div class="parameterHeading">Score</div>
 					<div class="score__value score__value--dist" id="distValue">000</div>
 				</div>
 			</div>
 
-			
+			<!-- This part will contain the health bar and number of bullets -->
 			<div class = "leftSideParameters"><!-- This part will contain the health bar and number of bullets -->
-				<div class="scoring_details" id="energy">
-					<div class="score_format">energy</div>
+				<div class="parameterDisplay" id="energy">
+					<div class="parameterHeading">energy</div>
 					<div class="score__value score__value--energy" id="energyValue">
 						<div class="energy-bar" id="energyBar"></div>
 					</div>
 				</div>
-				<div class="scoring_details" id="bullets">
-					<div class="score_format">bullets</div>
+				<div class="parameterDisplay" id="bullets">
+					<div class="parameterHeading">bullets</div>
 					<div class="score__value score__value--bullets" id="bulletCount">2</div>
 					<svg class="level-circle" id="bulletCircle" viewbox="0 0 200 200">
 						<circle id="bulletCircleBgr" r="80" cx="100" cy="100" fill="none" stroke="#d1b790" stroke-width="24px" />
@@ -49,8 +54,8 @@
 			</div>
 
 			<div class="mainScene" id="mainScene"></div>
-			<div class="message replay_msg" id="replayMessage">Click or Press any key to Replay</div>
-			<div class="message message--instructions" id="instructions">Grab the blue pills<span>avoid the red ones</span></div>
+			<div class="clickToReplay" id="clickToReplayMsg">Click or Press any key to Replay</div>
+			<div class="howToPlay" id="howToPlayMsg">Collect the blue gems!!<br><next>Stay away from the red rocks!!<br><next></next></next>Press 'X' to shoot bullets!!</next></next></div>
 		</div>
 	</body>
 </html>

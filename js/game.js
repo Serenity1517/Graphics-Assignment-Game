@@ -182,8 +182,9 @@ function handleKeyDown(event){
 }
 
 function handleKeyUp(event){
-  if(event.key == "x")
+  if(event.key == "x"){
     canFireBullet = 1;
+  }
 }
 
 // LIGHTS
@@ -315,7 +316,12 @@ Bullet = function(){
 function createBullet(){
   if(game.bulletCount > 0)
   {
+    var fireSound = new Audio('sounds/bulletFire.wav');
+    fireSound.play();
+    fireSound.volume = 0.6;
     game.bulletCount--;
+    if(game.bulletCount == 0)
+      bulletVal.style.animationName = 'blinking';
     bulletVal.innerHTML = Math.floor(game.bulletCount);
     var newBullet = new Bullet();
     newBullet.mesh.position.copy(airplane.propeller.getWorldPosition());
@@ -346,6 +352,9 @@ function updateBullet(){
           scene.remove(bulletsInUse[i].mesh);
           bulletsInUse.splice(i,1);
           game.distance += 100;
+          var enemy_bulletSound = new Audio('sounds/rockBreaking.wav');
+          enemy_bulletSound.play();
+          enemy_bulletSound.volume = 0.8;
         }
         else{
 
@@ -544,7 +553,7 @@ Sea = function(){
   var mat = new THREE.MeshPhongMaterial({
     color:Colors.blue,
     transparent:true,
-    opacity:.8,
+    opacity:.9,
     shading:THREE.FlatShading,
 
   });
@@ -668,7 +677,9 @@ EnnemiesHolder.prototype.rotateEnnemies = function(){
       game.planeCollisionSpeedX = 100 * diffPos.x / d;
       game.planeCollisionSpeedY = 100 * diffPos.y / d;
       ambientLight.intensity = 2;
-
+      var enemy_planeSound = new Audio('sounds/rockBreaking.wav');
+      enemy_planeSound.play();
+      enemy_planeSound.volume = 0.8;
       removeEnergy();
       i--;
     }else if (ennemy.angle > Math.PI){
@@ -1026,11 +1037,15 @@ function init(event){
 
   fieldDistance = document.getElementById("distValue");
   energyBar = document.getElementById("energyBar");
-  replayMessage = document.getElementById("replayMessage");
+  replayMessage = document.getElementById("clickToReplayMsg");
   fieldLevel = document.getElementById("levelValue");
   bulletVal = document.getElementById("bulletCount");
   levelCircle = document.getElementById("levelCircleStroke");
 
+  // var bckgrndSound = new Audio("sounds/background.mp3");
+  // bckgrndSound.loop = true;
+  // bckgrndSound.play();
+  // bckgrndSound.volume = 0.5;
   resetGame();
   createScene();
 

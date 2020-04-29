@@ -4,7 +4,7 @@
 	width: 100%;
 	height: 100%;
 	background: -webkit-linear-gradient(rgb(14, 112, 96), rgb(3, 62, 99));
-	background: linear-gradient(#ADD8E6, #87CEFA);
+	background: linear-gradient(rgb(134, 180, 159), rgb(192, 115, 43));
 }
 
 /*This containter contains the game's elements - plane, sky, clouds 
@@ -62,37 +62,39 @@ this can be accessed in game.js using document.getElementById()*/
 	pointer-events: none;
 }
 
-/*This stye sheet is for styling the Score-board and related details*/
-.scoring_details {
+/*This stye sheet is for styling all the following elements - 
+points, heath bar, stage, bullets*/
+.parameterDisplay {
 	position: relative;
 	display: inline-block;
 	padding: 0 1em;
 	vertical-align: top;
 }
 
-.scoring_details:nth-child(2) {
-	border-right: 1px solid #c258ab;
-	border-left: 1px solid #c258ab;
+/*This style sheet is for creating the separator bars between
+the various score/health/bullet related elements*/
+.parameterDisplay:nth-child(2) {
+	border-right: 2px solid #881c37;
+	border-left: 2px solid #881c37;
 }
 
-.scoring_details:nth-child(3){
-	border-right: 1px solid #c258ab;
-}
-
-.score_format {
-	font-size: 15px;
+/*This style sheet is for designing the text that is used in
+each score/health/bullet related element's heading*/
+.parameterHeading {
+	font-size: 16px;
+	font-weight: bold;
 	position: relative;
 	margin: 0 0 0.5em 0;
 	text-align: center;
 	letter-spacing: 4px;
 	text-transform: uppercase;
-	color: #cecf64;
+	color: #572700;
 }
 
 .score__value {
 	font-family: 'Comic Sans MS';
 	font-weight: bold;
-	color: #9e5b9b;
+	color: #4d0049;
 }
 
 .score__value--level {
@@ -141,37 +143,51 @@ this can be accessed in game.js using document.getElementById()*/
 	animation-iteration-count: infinite;
 }
 
-.message {
-	font-weight: bold;
+/*Style sheet for the replay message that is displayed 
+onto the screen when the player loses*/
+.clickToReplay {
 	position: absolute;
+	bottom: 52vh;
+	display: none;
+	text-indent: 0.5em;
+	letter-spacing: 0.5em;
+	color: #0a0097;
+	font-weight: bold;
 	left: 0;
 	width: 100%;
+	font-size: 1.5vw;
 	text-align: center;
 	text-transform: uppercase;
 	pointer-events: none;
 }
 
-.message replay_msg {
-	font-size: 1.25vw;
-	bottom: 40vh;
-	display: none;
-	text-indent: 0.5em;
-	letter-spacing: 0.5em;
-	color: #b584be;
+/*This contains the style sheet for displaying how to play
+instructions on the screen*/
+.howToPlay {
+	position: absolute;
+	margin-top: 87vh ;
+	margin-left: 68vh;
+	text-align: center;
+	font-weight: bold;
+	font-style: oblique;
+	font-size: 1.2em;
+	font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+	color: #0b46b3;
+	letter-spacing: 0.18em;
+	pointer-events: none;
 }
 
-.message--instructions {
-	font-family: 'Playfair Display';
-	font-size: 0.85em;
-	bottom: 8vh;
-	letter-spacing: 0.2em;
-	color: #68c3c0;
-}
-
-.message--instructions span {
-	display: block;
-	color: #d6483b;
+/*Style sheet for displaying how to play instructions
+on the screen*/
+.howToPlay next{
+	color: #ff0a0a;
 	white-space: nowrap;
+}
+
+/*Style sheet for displaying how to play instructions
+on the screen- Press X to fire*/
+.howToPlay next next {
+	color: #019c35;
 }
 
 @-webkit-keyframes blinking {
