@@ -20,7 +20,9 @@ This game is made using WebGL (JavaScript,HTML,CSS and Three JS(a framework for 
 
 3. Please do not delete any of the files present in other folders for the proper functioning of the game.
 
-4.A demonstration video is also provided with the game to show how to play the game.
+4.Two demonstration videoes is also provided with the game to show how to play the game.
+	demo1.mp4 is played by Aniruddha Mahajan
+	demo2.mp4 is played by Shreyas Srikrishna
 
 
 INSTRUCTIONS FOR PLAYING GAME:-
