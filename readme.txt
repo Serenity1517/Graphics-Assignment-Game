@@ -9,7 +9,8 @@
 ************************************************************************************************
                              README FILE FOR THE GAME
 ************************************************************************************************
-
+NOTE  ---  File in libs folder are open source libraries called threejs and twinMaxjs. Please do not consider them for plagarism is evaluation.
+	The actual souce code files (game.js index.html and game.css) are put in folder in txt format.
 Please read the following file carefully.
 
 This game is made using WebGL (JavaScript,HTML,CSS and Three JS(a framework for WebGl that helps in producing 3D graphics)).
