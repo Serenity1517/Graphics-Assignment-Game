@@ -1,360 +1,348 @@
-//colors
-var Colors = {
-    red:0xf25346,
-    white:0xd8d0d1,
-    brown:0x59332e,
-    brownDark:0x23190f,
-    pink:0xF5986E,
-    yellow:0xf4ce93,
-    blue:0x68c3c0,
-    silver:0x808080,
-};
-// useful vars
-var game;
-var deltaTime = 0;
-var canFireBullet = 1;
-var newTime = new Date().getTime();
-var oldTime = new Date().getTime();
-var ennemiesPool = [];
-var particlesPool = [];
-var particlesInUse = [];
+/* 
+***************************************
+2017A7PS0145P  Aniruddha Mahajan
+2017A7PS0162P  Shreyas Srikrishna
+***************************************
+ */ 
+
+
+/* *********************************************************************
+ * ****************LIST OF VARIABLES***********************************
+ * ********************************************************************
+  */
+ 
+/* This variable is the main controller for the game. It contains various attributes that are 
+relevant to the game. All of them are initialized in the generateNewGame() function */ 
+var controller;
+
+/* Basic three js variable that defines the scene/setting (initialized using THREE.Scene)  */
+var scene;
+
+/* Basic three js variable that defines the perpectivCamera (initalized using THREE.PerspectiveCamera) */
+var perspCam;
+
+/* Basic three js variable that defines the webGlRenderer (initalized using THREE.WebGLRenderer) */
+var webGlRenderer;
+
+/* Basic three js variable that will contain the renderer's domElement
+It is the link between our HTML element (mainScene) and three js */
+var container;
+
+/* Variables used while generating the lights for the game setting  */
+var ambLight, hemiLight, lightOfShadow;
+
+/* Time value of current frame */
+var currFrameTime = new Date().getTime();
+
+/* Time value of previous frame */
+var prevFrameTime = new Date().getTime();
+
+/* This variable is a time element (time elapsed between consecutive animation frames). 
+It is computed at the start of each frame using the Date().getTime() function */
+var dT = 0;
+
+/* This array contains all the active meteors in the game setting */
+var meteorsPool = [];
+
+/* This array contains all the active fragments(generated when a meteor 
+  explodes when either the aircraft or a bullet hits it) in the game setting */
+var fragmentsPool = [];
+
+/* This array contains all the active bullets in the game setting
+Bullets that either hit a meteor or move out of the window are 
+deleted from this array immediately   */
 var bulletsInUse = [];
 
-//const shooter = document.getElementById("player-controlled-shooter")   
+/* This is a switch variable (bool - 0 or 1) */
+var canFireBullet = 1;
 
-function resetGame(){
-  game = {
-          speed:0,
-          initSpeed:.00035,
-          baseSpeed:.00035,
-          targetBaseSpeed:.00035,
-          incrementSpeedByTime:.0000025,
-          incrementSpeedByLevel:.000005,
-          distanceForSpeedUpdate:100,
-          speedLastUpdate:0,
+/* Variable that defines the angle (in degrees) span that the camera is able to capture
+in our current scene. Needed during camera initialization */
+var viewSpan = 55;
 
-          distance:0,
-          ratioSpeedDistance:50,
-          energy:100,
-          ratioSpeedEnergy:3,
+/* Following variables represent the screen height and width  */
+var HEIGHT = window.innerHeight;
+var WIDTH = window.innerWidth;
 
-          level:1,
-          levelLastUpdate:0,
-          distanceForLevelUpdate:1000,
+/* Defines the aspect ratio of our screen. Needed during camera initialization  */
+var aspRatio = WIDTH/HEIGHT;
 
-          planeDefaultHeight:100,
-          planeAmpHeight:80,
-          planeAmpWidth:75,
-          planeMoveSensivity:0.005,
-          planeRotXSensivity:0.0008,
-          planeRotZSensivity:0.0004,
-          planeFallSpeed:.001,
-          planeMinSpeed:1.2,
-          planeMaxSpeed:1.6,
-          planeSpeed:0,
-          planeCollisionDisplacementX:0,
-          planeCollisionSpeedX:0,
+/* This denotes the mouse pointer position. The aircraft is moved based on
+changes in currMousePtrLoc.x and currMousePtrLoc.y  */
+var currMousePtrLoc = { x: 0, y: 0 };
 
-          planeCollisionDisplacementY:0,
-          planeCollisionSpeedY:0,
+/* List of colors that we will be using throughout.. 
+this variable is only for easier coding which otherwise holds no significance */
+var usefulColours = { mediumAqua: 0x66CDAA, lightOceanGreen: 0x20B2AA, limeGreen: 0x1CE678, greenYellow: 0xADFF2F, lightBlue: 0x1E90FF, darkBlue: 0x00008B, red:0xf25346, white:0xd8d0d1, brown:0x59332e, blue:0x68c3c0, silver:0x808080,  black: 0x000000, violet: 0x8A2BE2};
 
-          bulletSpeed:100,
+/* Switch (bool - 0 or 1) variable used to determine when to display
+the 'click to start' message  */
+var gameStarted = 0;
 
-          seaRadius:600,
-          seaLength:800,
-          //seaRotationSpeed:0.006,
-          wavesMinAmp : 5,
-          wavesMaxAmp : 20,
-          wavesMinSpeed : 0.001,
-          wavesMaxSpeed : 0.003,
+/*Variable for  */
+var ocean, aircraft;
 
-          cameraFarPos:500,
-          cameraNearPos:150,
-          cameraSensivity:0.002,
 
-          coinDistanceTolerance:15,
-          coinValue:3,
-          coinsSpeed:.5,
-          coinLastSpawn:0,
-          distanceForCoinsSpawn:100,
+var currPoints, healthMeterFill, replayMessage, stageField, stageContainer, bulletVal, startMessage;
 
-          ennemyDistanceTolerance:10,
-          ennemyValue:10,
-          ennemiesSpeed:.6,
-          ennemyLastSpawn:0,
-          distanceForEnnemiesSpawn:50,
+/* *
+ * ****************************************************************
+ * ************LIST OF FUNCTIONS FOR INITIALIZING****************** 
+ * *****************THE THREEJS ENVIRONMENT************************
+  */
 
-          bulletCount:2,
-          status : "playing",
-         };
-  fieldLevel.innerHTML = Math.floor(game.level);
-  bulletVal.innerHTML = Math.floor(game.bulletCount);
-}
-
-//THREEJS RELATED VARIABLES
-
-var scene,
-    camera, fieldOfView, aspectRatio, nearPlane, farPlane,
-    renderer,
-    container,
-    controls;
-
-//SCREEN & MOUSE VARIABLES
-
-var HEIGHT, WIDTH,
-    mousePos = { x: 0, y: 0 };
-
-//INIT THREE JS, SCREEN AND MOUSE EVENTS
-
-function createScene() {
-
-  HEIGHT = window.innerHeight;
-  WIDTH = window.innerWidth;
-
+/* This function initializes the threejs scene, camera and renderer
+so that we can render the scene with the camera  */
+function generateScene() {
+  //create scene
   scene = new THREE.Scene();
-  aspectRatio = WIDTH / HEIGHT;
-  fieldOfView = 50;
-  nearPlane = .1;
-  farPlane = 10000;
-  camera = new THREE.PerspectiveCamera(fieldOfView, aspectRatio, nearPlane, farPlane);
-
-  scene.fog = new THREE.Fog(0xf7d9aa, 100,950);
-  camera.position.x = 0;
-  camera.position.z = 200;
-  camera.position.y = game.planeDefaultHeight;
-  //camera.lookAt(new THREE.Vector3(0, 400, 0));
-
-  renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  renderer.setSize(WIDTH, HEIGHT);
-
-  renderer.shadowMap.enabled = true;
-
+  //create camera
+  perspCam = new THREE.PerspectiveCamera(viewSpan, aspRatio, 0.05, 12000);
+  //add fog to the scene for realistic effect
+  scene.fog = new THREE.Fog(0xAAF7D9, 99,1000);
+  //set camera position
+  perspCam.position.x = 0;
+  perspCam.position.z = 200;
+  perspCam.position.y = controller.aircraftDefaultHeight;
+  //create renderer
+  webGlRenderer = new THREE.WebGLRenderer({ stencil: true, alpha: true, logarithmicDepthBuffer: false, antialias: true });
+  webGlRenderer.setSize(WIDTH, HEIGHT);
+  //specify that renderer has to render shadow maps
+  webGlRenderer.shadowMap.enabled = true;
+  //initialize container
   container = document.getElementById('mainScene');
-  container.appendChild(renderer.domElement);
-
-  window.addEventListener('resize', handleWindowResize, false);
-
-  /*
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.minPolarAngle = -Math.PI / 2;
-  controls.maxPolarAngle = Math.PI ;
-
-  //controls.noZoom = true;
-  //controls.noPan = true;
-  //*/
+  container.appendChild(webGlRenderer.domElement);
 }
 
-// MOUSE, KEY AND SCREEN EVENTS
-      
-function handleWindowResize() {
-  HEIGHT = window.innerHeight;
-  WIDTH = window.innerWidth;
-  renderer.setSize(WIDTH, HEIGHT);
-  camera.aspect = WIDTH / HEIGHT;
-  camera.updateProjectionMatrix();
+/* This function lights the scene using three js library functions and populates
+the light object's required attributes */ 
+function generateLighting() {
+  ambLight = new THREE.AmbientLight(0xdc8874, .5);
+  hemiLight = new THREE.HemisphereLight(0xaaaaaa,0x000000, .9);
+  lightOfShadow = new THREE.DirectionalLight(0xffffff, .9);
+  lightOfShadow.position.set(150, 350, 350);
+  lightOfShadow.castShadow = true;
+  lightOfShadow.shadow.camera.right = 400;
+  lightOfShadow.shadow.camera.top = 400;
+  lightOfShadow.shadow.camera.left = -400;
+  lightOfShadow.shadow.camera.bottom = -400;
+  lightOfShadow.shadow.camera.near = 1;
+  lightOfShadow.shadow.camera.far = 1000;
+  //below 2 attributes are needed to specify ratio of the shadow length
+  //w.r.t the length of in-game elements
+  lightOfShadow.shadow.mapSize.width = 4096;
+  lightOfShadow.shadow.mapSize.height = 4096;
+
+  scene.add(hemiLight);
+  scene.add(lightOfShadow);
+  scene.add(ambLight);
+
 }
 
-function handleMouseMove(event) {
-  var tx = -1 + (event.clientX / WIDTH)*2;
-  var ty = 1 - (event.clientY / HEIGHT)*2;
-  mousePos = {x:tx, y:ty};
+/* This function is triggered/executed whenever the game is restarted.
+It initializes the attributes of the controller variable and resets
+the stage and bullets count on the UI  */
+function generateNewGame(){
+  controller = {
+        stateOfGame : "notStarted",
+        
+        /* Variables related to speed of game and plane */ 
+        baseSpeed:.00035,
+        startSpeed:.00035,
+        distToUpdateSpeed:100,
+        lastUpdatedSpeed:0,
+        speed:0,
+        targetBaseSpeed:.00035,
+        increaseSpeedWithLevel:.000005,
+        increaseSpeedWithTime:.0000025,
+
+        /*  Variables that are used for storing the display variables of the HTML file. */
+        pointsScored:0,
+        ratioOfSpeedEnergy:3,
+        ratioOfSpeedDistance:50,
+        stage:1,
+        health:100,
+
+        /* Variables used for updating the stage of the game. */ 
+        stageLastUpdate:0,
+        distanceForStageUpdate:1000,
+
+        /* Variable to store properties of the aircraft */ 
+        aircraftDefaultHeight:100,
+        aircraftAmplitudeHt:80,
+        aircraftAmplitudeWdth:75,
+        aircraftMovementSensi:0.005,
+        aircraftRotationXSensi:0.0008,
+        aircraftRotationZSensi:0.0004,
+        aircraftFallSpeed:.001,
+        minAircraftSpeed:1.2,
+        maxAircraftSpeed:1.6,
+        aircraftSpeed:0,
+        
+        /* Variables related to collision of aircraft. */ 
+        aircraftCollisionXDisplacement:0,
+        aircraftCollisionXSpeed:0,
+        aircraftCollisionYSpeed:0,
+        aircraftCollisionYSpeed:0,
+
+        /* Variables related to bullets. */ 
+        bulletCount:2,
+        bulletSpeed:100,
+
+        /* Variables related to Ocean */ 
+        radiusOfSea:600,
+        lengthOfSea:800, 
+        minSpeedOfWaves : 0.001,
+        maxSpeedOfWaves : 0.003,
+        minSizeOfWaves : 5,
+        maxSizeOfWaves : 20,
+       
+
+        /*  Variables made for camera positioning and sensitivity.  */
+        farPosOfCamera:500,
+        nearPosOfCamera:150,
+        cameraSensivity:0.002,
+
+        jewelDistanceToler:15,
+        speedOfJewel:.5,
+        jewelSpawnDistance:100,
+        valueOfJewel:3,
+        lastSpawnOfJewel:0,
+
+        /* Variables related to enemy meteors. */ 
+        healthLossByMeteor:10,
+        meteorsSpeed:.6,
+        distanceToleranceInMeteor:10,
+        lastSpawnOfMeteor:0,
+        meteorSpawnDistance:50,
+        };
+  stageField.innerHTML = Math.floor(controller.stage);
+  bulletVal.innerHTML = Math.floor(controller.bulletCount);
 }
 
-function handleMouseUp(event){
-  if (game.status == "waitingReplay"){
-    resetGame();
+/* *
+ * FUNCTIONS FOR HANDLING ON SCREEN MOUSE/KEYBOARD EVENTS
+ * These functions are passed as callbacks to the event listeners 
+ *  */
+
+ /* Handles resizing of the window  */
+function windowSizeChangeHandler() {
+  webGlRenderer.setSize(WIDTH, HEIGHT);
+  perspCam.aspect = WIDTH / HEIGHT;
+  //need to call the below function for the 
+  //attribute changes to take effect 
+  perspCam.updateProjectionMatrix();
+}
+
+/* Handles movement of mouse pointer  */
+function mousePtrMoveHandler(){
+  var adjustedX = (event.clientX / WIDTH)*2;
+  adjustedX--;
+  var adjustedY = (event.clientY / HEIGHT)*(-2);
+  adjustedY++;
+  currMousePtrLoc = {x:adjustedX, y:adjustedY};
+}
+
+/* Handles release of mouse click */
+function mouseClickReleaseHandler(event){
+  if (controller.stateOfGame == "awaitingGameRestart"){
     hideReplay();
+    generateNewGame();
   }
 }
 
-function handleKeyDown(event){
-  if (game.status == "waitingReplay"){
-    resetGame();
+/* Handles pressing of a button on the keyboard  */
+function keyButtonPressHandler(event){
+  if (controller.stateOfGame == "awaitingGameRestart"){
+    generateNewGame();
     hideReplay();
   }
-  else if(game.status == "playing"){
+  else if(controller.stateOfGame == "waitingForStart"){
+    hideStart();
+    generateNewGame();
+    var bgAudio = document.getElementById("backAudio");
+    if(bgAudio.canPlayType('audio/mp3')){
+      bgAudio.setAttribute('src','sounds/background.mp3');
+      console.log("WORKING");  
+      bgAudio.play();
+    }
+    controller.stateOfGame = "currentlyInGame";
+  }
+  else if(controller.stateOfGame == "currentlyInGame"){
     if(canFireBullet == 1 && event.key == "x"){
-      createBullet();
+      generateBullet();
       //console.log("\nheree");
       canFireBullet = 0;
     }
   }
 }
 
-function handleKeyUp(event){
+/* Handles releasing of a button on the keyboard  */
+function keyButtonReleaseHandler(event){
   if(event.key == "x"){
     canFireBullet = 1;
   }
 }
 
-// LIGHTS
 
-var ambientLight, hemisphereLight, shadowLight;
+/* *
+ * *********************************************
+ * ******FUNCTIONS FOR CREATING THE VARIOUS*****
+ * ******ELEMENTS IN THE SCENE LIKE BULLETS,****
+ * ******AIRCRAFT,SKY,JEWELS,OCEAN, CLOUD,******
+ * ******METEOR,FRAGMENTS----------------*******
+  */
 
-function createLights() {
-
-  hemisphereLight = new THREE.HemisphereLight(0xaaaaaa,0x000000, .9)
-
-  ambientLight = new THREE.AmbientLight(0xdc8874, .5);
-
-  shadowLight = new THREE.DirectionalLight(0xffffff, .9);
-  shadowLight.position.set(150, 350, 350);
-  shadowLight.castShadow = true;
-  shadowLight.shadow.camera.left = -400;
-  shadowLight.shadow.camera.right = 400;
-  shadowLight.shadow.camera.top = 400;
-  shadowLight.shadow.camera.bottom = -400;
-  shadowLight.shadow.camera.near = 1;
-  shadowLight.shadow.camera.far = 1000;
-  shadowLight.shadow.mapSize.width = 4096;
-  shadowLight.shadow.mapSize.height = 4096;
-
-  var ch = new THREE.CameraHelper(shadowLight.shadow.camera);
-
-  //scene.add(ch);
-  scene.add(hemisphereLight);
-  scene.add(shadowLight);
-  scene.add(ambientLight);
-
-}
-
-
-var Pilot = function(){
-  this.mesh = new THREE.Object3D();
-  this.mesh.name = "pilot";
-  this.angleHairs=0;
-
-  var bodyGeom = new THREE.BoxGeometry(15,15,15);
-  var bodyMat = new THREE.MeshPhongMaterial({color:Colors.brown, shading:THREE.FlatShading});
-  var body = new THREE.Mesh(bodyGeom, bodyMat);
-  body.position.set(2,-12,0);
-
-  this.mesh.add(body);
-
-  var faceGeom = new THREE.BoxGeometry(10,10,10);
-  var faceMat = new THREE.MeshLambertMaterial({color:Colors.pink});
-  var face = new THREE.Mesh(faceGeom, faceMat);
-  this.mesh.add(face);
-
-  var hairGeom = new THREE.BoxGeometry(4,4,4);
-  var hairMat = new THREE.MeshLambertMaterial({color:Colors.brown});
-  var hair = new THREE.Mesh(hairGeom, hairMat);
-  hair.geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0,2,0));
-  var hairs = new THREE.Object3D();
-
-  this.hairsTop = new THREE.Object3D();
-
-  for (var i=0; i<12; i++){
-    var h = hair.clone();
-    var col = i%3;
-    var row = Math.floor(i/3);
-    var startPosZ = -4;
-    var startPosX = -4;
-    h.position.set(startPosX + row*4, 0, startPosZ + col*4);
-    h.geometry.applyMatrix(new THREE.Matrix4().makeScale(1,1,1));
-    this.hairsTop.add(h);
-  }
-  hairs.add(this.hairsTop);
-
-  var hairSideGeom = new THREE.BoxGeometry(12,4,2);
-  hairSideGeom.applyMatrix(new THREE.Matrix4().makeTranslation(-6,0,0));
-  var hairSideR = new THREE.Mesh(hairSideGeom, hairMat);
-  var hairSideL = hairSideR.clone();
-  hairSideR.position.set(8,-2,6);
-  hairSideL.position.set(8,-2,-6);
-  hairs.add(hairSideR);
-  hairs.add(hairSideL);
-
-  var hairBackGeom = new THREE.BoxGeometry(2,8,10);
-  var hairBack = new THREE.Mesh(hairBackGeom, hairMat);
-  hairBack.position.set(-1,-4,0)
-  hairs.add(hairBack);
-  hairs.position.set(-5,5,0);
-
-  this.mesh.add(hairs);
-
-  var glassGeom = new THREE.BoxGeometry(5,5,5);
-  var glassMat = new THREE.MeshLambertMaterial({color:Colors.brown});
-  var glassR = new THREE.Mesh(glassGeom,glassMat);
-  glassR.position.set(6,0,3);
-  var glassL = glassR.clone();
-  glassL.position.z = -glassR.position.z
-
-  var glassAGeom = new THREE.BoxGeometry(11,1,11);
-  var glassA = new THREE.Mesh(glassAGeom, glassMat);
-  this.mesh.add(glassR);
-  this.mesh.add(glassL);
-  this.mesh.add(glassA);
-
-  var earGeom = new THREE.BoxGeometry(2,3,2);
-  var earL = new THREE.Mesh(earGeom,faceMat);
-  earL.position.set(0,0,-6);
-  var earR = earL.clone();
-  earR.position.set(0,0,6);
-  this.mesh.add(earL);
-  this.mesh.add(earR);
-}
-
-Pilot.prototype.updateHairs = function(){
-  //*
-   var hairs = this.hairsTop.children;
-
-   var l = hairs.length;
-   for (var i=0; i<l; i++){
-      var h = hairs[i];
-      h.scale.y = .75 + Math.cos(this.angleHairs+i/3)*.25;
-   }
-  this.angleHairs += game.speed*deltaTime*40;
-  //*/
-}
-
-
+/**************** 1: BULLET ************ */
+/* *******************Function related to bullet creation.******************** */
+/* This function is used to create mesh of bullet object (bullet constructor) */ 
 Bullet = function(){
-    this.mesh = new THREE.Mesh(new THREE.SphereGeometry(2, 8, 8), new THREE.MeshBasicMaterial( {color: Colors.silver} ));
+    this.mesh = new THREE.Mesh(new THREE.SphereGeometry(3, 8, 8), new THREE.MeshBasicMaterial( {color: usefulColours.black} ));
 }
 
-function createBullet(){
-  if(game.bulletCount > 0)
+/* This function creates an individual bullet. */ 
+function generateBullet(){
+  if(controller.bulletCount > 0)
   {
     var fireSound = new Audio('sounds/bulletFire.wav');
     fireSound.play();
     fireSound.volume = 0.6;
-    game.bulletCount--;
-    if(game.bulletCount == 0)
+    controller.bulletCount--;
+    if(controller.bulletCount == 0)
       bulletVal.style.animationName = 'blinking';
-    bulletVal.innerHTML = Math.floor(game.bulletCount);
+    bulletVal.innerHTML = Math.floor(controller.bulletCount);
     var newBullet = new Bullet();
-    newBullet.mesh.position.copy(airplane.propeller.getWorldPosition());
-    console.log("\nAirplane position : " + airplane.propeller.getWorldPosition().x);
-    console.log("\nnew BUllet position : " + newBullet.mesh.position.x);
+    newBullet.mesh.position.copy(aircraft.rotor.getWorldPosition());
+    //console.log("\nAircraft position : " + aircraft.rotor.getWorldPosition().x);
+    //console.log("\nnew BUllet position : " + newBullet.mesh.position.x);
     bulletsInUse.push(newBullet);
     scene.add(newBullet.mesh);
   }
-  
 }
 
+/* This function is used to update the postion of the bullet. It also checks for collision of bullets with enemy Meteors. */ 
 function updateBullet(){
   
   for(var i=0; i<bulletsInUse.length;i++){
-    console.log(bulletsInUse[i]);
+    //console.log(bulletsInUse[i]);
     //console.log(bulletsInUse[i].mesh.position.x + " " + i);
     var bullet = bulletsInUse[i];
-    bulletsInUse[i].mesh.position.x += 5;
+    bulletsInUse[i].mesh.position.x += 8;
 
-    for (var j=0; j<ennemiesHolder.ennemiesInUse.length; j++){
-        var ennemy = ennemiesHolder.ennemiesInUse[j];
-        var position_diff = bullet.mesh.position.clone().sub(ennemy.mesh.position.clone());
+    for (var j=0; j<meteorsHolder.meteorsInUse.length; j++){
+        var meteor = meteorsHolder.meteorsInUse[j];
+        var position_diff = bullet.mesh.position.clone().sub(meteor.mesh.position.clone());
         var diff = position_diff.length();
-        if (diff<game.ennemyDistanceTolerance){
-          particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
-          ennemiesPool.unshift(ennemiesHolder.ennemiesInUse.splice(j,1)[0]);
-          ennemiesHolder.mesh.remove(ennemy.mesh);
+        if (diff<controller.distanceToleranceInMeteor){
+          fragmentsHolder.spawnFragments(meteor.mesh.position.clone(), 15, usefulColours.violet, 3);
+          meteorsPool.unshift(meteorsHolder.meteorsInUse.splice(j,1)[0]);
+          meteorsHolder.mesh.remove(meteor.mesh);
           scene.remove(bulletsInUse[i].mesh);
           bulletsInUse.splice(i,1);
-          game.distance += 100;
-          var enemy_bulletSound = new Audio('sounds/rockBreaking.wav');
-          enemy_bulletSound.play();
-          enemy_bulletSound.volume = 0.8;
+          controller.pointsScored += 100;
+          var meteor_bulletSound = new Audio('sounds/rockBreaking.wav');
+          meteor_bulletSound.play();
+          meteor_bulletSound.volume = 1;
         }
         else{
 
@@ -363,121 +351,129 @@ function updateBullet(){
   }
 }
 
-var AirPlane = function(){
-  this.mesh = new THREE.Object3D();
-  this.mesh.name = "airPlane";
+/**************** 2: AIRCRAFT ************ */
+/* *******************Function related to aircraft creation.******************** */
+/* This function is used to create mesh of bullet object. (aircraft constructor)*/ 
+var Aircraft = function(){
+  //1.Define the mesh as a generic 3D Object
+    this.mesh = new THREE.Object3D();
+    this.mesh.name = "aircraft";
 
-  // Cabin
+  //2.Create the fuselage
+    //define geometry
+    var fuselageGeometry = new THREE.BoxGeometry(80,50,50); //generates cuboid with l,b,h=80,50,50
+    //set its vertices
+    fuselageGeometry.vertices[4].y-=10;
+    fuselageGeometry.vertices[5].y-=10;
+    fuselageGeometry.vertices[6].y+=30;
+    fuselageGeometry.vertices[7].y+=30;
+    fuselageGeometry.vertices[4].z+=20;
+    fuselageGeometry.vertices[5].z-=20;
+    fuselageGeometry.vertices[6].z+=20;
+    fuselageGeometry.vertices[7].z-=20;
+    //define material
+    var fuselageMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.darkBlue });
+    //create the mesh using geometry,material
+    var fuselage = new THREE.Mesh(fuselageGeometry, fuselageMaterial);
+    fuselage.receiveShadow = true;
+    fuselage.castShadow = true;
+    this.mesh.add(fuselage);
 
-  var geomCabin = new THREE.BoxGeometry(80,50,50,1,1,1);
-  var matCabin = new THREE.MeshPhongMaterial({color:Colors.red, shading:THREE.FlatShading});
+  //3. Create the Nose of the Aircraft (the part before the propelller)
+    var noseGeometry = new THREE.BoxGeometry(20,50,50);
+    var noseMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.lightBlue });
+    var nose = new THREE.Mesh(noseGeometry, noseMaterial);
+    //set the x position for the nose relative to the fuselage
+    nose.position.x = 50;
+    nose.castShadow = true;
+    nose.receiveShadow = true;
+    this.mesh.add(nose);
 
-  geomCabin.vertices[4].y-=10;
-  geomCabin.vertices[4].z+=20;
-  geomCabin.vertices[5].y-=10;
-  geomCabin.vertices[5].z-=20;
-  geomCabin.vertices[6].y+=30;
-  geomCabin.vertices[6].z+=20;
-  geomCabin.vertices[7].y+=30;
-  geomCabin.vertices[7].z-=20;
+  //4. Create the tail of the Aircraft (Part where the airline logo is usually located)
+    var tailFinGeometry = new THREE.BoxGeometry(15,20,5);
+    var tailFinMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.lightBlue });
+    var tailFin = new THREE.Mesh(tailFinGeometry, tailFinMaterial);
+    tailFin.receiveShadow = true;
+    //set the tailFin position relative to the fuselage-- bit to the left and bit upward
+    tailFin.position.set(-40,20,0); //set position(x,y,z)
+    tailFin.castShadow = true;
+    this.mesh.add(tailFin);
 
-  var cabin = new THREE.Mesh(geomCabin, matCabin);
-  cabin.castShadow = true;
-  cabin.receiveShadow = true;
-  this.mesh.add(cabin);
+  //5. Create the side wing of the Aircraft
+    //this single object will take care of both left wing and right wing
+    var wingGeometry = new THREE.BoxGeometry(30,5,120);
+    var wingMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.mediumAqua, shading:THREE.FlatShading});
+    var wing = new THREE.Mesh(wingGeometry, wingMaterial);
+    wing.castShadow = true;
+    wing.receiveShadow = true;
+    //position is almost same relative to fuselage, but just shifted a bit upward
+    //the wing clearly is 1 single object and cuts through the fuselage
+    wing.position.set(0,15,0);
+    this.mesh.add(wing);
 
-  // Engine
-  var geomEngine = new THREE.BoxGeometry(20,50,50,1,1,1);
-  var matEngine = new THREE.MeshPhongMaterial({color:Colors.white, shading:THREE.FlatShading});
-  var engine = new THREE.Mesh(geomEngine, matEngine);
-  engine.position.x = 50;
-  engine.castShadow = true;
-  engine.receiveShadow = true;
-  this.mesh.add(engine);
+  //6.1. Create the rotor/propelller of the Aircraft
+    var rotorGeometry = new THREE.BoxGeometry(20,10,10);
+    //rotor coordinates
+    rotorGeometry.vertices[4].y-=5;
+    rotorGeometry.vertices[5].y-=5;
+    rotorGeometry.vertices[6].y+=5;
+    rotorGeometry.vertices[7].y+=5;
+    rotorGeometry.vertices[4].z+=5;
+    rotorGeometry.vertices[5].z-=5;
+    rotorGeometry.vertices[6].z+=5;
+    rotorGeometry.vertices[7].z-=5;
+    var rotorMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.brown, shading:THREE.FlatShading});
+    this.rotor = new THREE.Mesh(rotorGeometry, rotorMaterial);
+    this.rotor.castShadow = true;
+    this.rotor.receiveShadow = true;
 
-  // Tail Plane
+    //6.2. Create the blades for the rotor
+      //create a cuboid with long y value (long breadth) and short x and z values
+      var propBladeGeometry = new THREE.BoxGeometry(1,80,10); 
+      var propBladeMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.black, shading:THREE.FlatShading});
+      //first blade - vertical
+      var vertPropBlade = new THREE.Mesh(propBladeGeometry, propBladeMaterial);
+      vertPropBlade.castShadow = true;
+      vertPropBlade.receiveShadow = true;
+      //blade position relative to rotor - very slightly shifted to the right
+      vertPropBlade.position.set(8,0,0);      
+      //second blade is basically the same (copy) of the first blade
+      var horizPropBlade = vertPropBlade.clone();
+      //just need to rotate it by 90 degrees
+      //NOTE: rotation about x axis (rotation on y-z plane)
+      horizPropBlade.rotation.x = Math.PI/2;
+      horizPropBlade.castShadow = true;
+      horizPropBlade.receiveShadow = true;
+      //add the blades to the rotor
+      this.rotor.add(vertPropBlade);
+      this.rotor.add(horizPropBlade);
+    //rotor position relative to the fuselage
+    this.rotor.position.set(60,0,0);
+    //add the rotor to the aircraft's mesh
+    this.mesh.add(this.rotor);
 
-  var geomTailPlane = new THREE.BoxGeometry(15,20,5,1,1,1);
-  var matTailPlane = new THREE.MeshPhongMaterial({color:Colors.red, shading:THREE.FlatShading});
-  var tailPlane = new THREE.Mesh(geomTailPlane, matTailPlane);
-  tailPlane.position.set(-40,20,0);
-  tailPlane.castShadow = true;
-  tailPlane.receiveShadow = true;
-  this.mesh.add(tailPlane);
-
-  // Wings
-
-  var geomSideWing = new THREE.BoxGeometry(30,5,120,1,1,1);
-  var matSideWing = new THREE.MeshPhongMaterial({color:Colors.red, shading:THREE.FlatShading});
-  var sideWing = new THREE.Mesh(geomSideWing, matSideWing);
-  sideWing.position.set(0,15,0);
-  sideWing.castShadow = true;
-  sideWing.receiveShadow = true;
-  this.mesh.add(sideWing);
-
-  var geomWindshield = new THREE.BoxGeometry(3,15,20,1,1,1);
-  var matWindshield = new THREE.MeshPhongMaterial({color:Colors.white,transparent:true, opacity:.3, shading:THREE.FlatShading});;
-  var windshield = new THREE.Mesh(geomWindshield, matWindshield);
-  windshield.position.set(5,27,0);
-
-  windshield.castShadow = true;
-  windshield.receiveShadow = true;
-
-  this.mesh.add(windshield);
-
-  var geomPropeller = new THREE.BoxGeometry(20,10,10,1,1,1);
-  geomPropeller.vertices[4].y-=5;
-  geomPropeller.vertices[4].z+=5;
-  geomPropeller.vertices[5].y-=5;
-  geomPropeller.vertices[5].z-=5;
-  geomPropeller.vertices[6].y+=5;
-  geomPropeller.vertices[6].z+=5;
-  geomPropeller.vertices[7].y+=5;
-  geomPropeller.vertices[7].z-=5;
-  var matPropeller = new THREE.MeshPhongMaterial({color:Colors.brown, shading:THREE.FlatShading});
-  this.propeller = new THREE.Mesh(geomPropeller, matPropeller);
-
-  this.propeller.castShadow = true;
-  this.propeller.receiveShadow = true;
-
-  var geomBlade = new THREE.BoxGeometry(1,80,10,1,1,1);
-  var matBlade = new THREE.MeshPhongMaterial({color:Colors.brownDark, shading:THREE.FlatShading});
-  var blade1 = new THREE.Mesh(geomBlade, matBlade);
-  blade1.position.set(8,0,0);
-
-  blade1.castShadow = true;
-  blade1.receiveShadow = true;
-
-  var blade2 = blade1.clone();
-  blade2.rotation.x = Math.PI/2;
-
-  blade2.castShadow = true;
-  blade2.receiveShadow = true;
-
-  this.propeller.add(blade1);
-  this.propeller.add(blade2);
-  this.propeller.position.set(60,0,0);
-  this.mesh.add(this.propeller);
-
-  var wheelProtecGeom = new THREE.BoxGeometry(30,15,10,1,1,1);
-  var wheelProtecMat = new THREE.MeshPhongMaterial({color:Colors.red, shading:THREE.FlatShading});
+  //7. Design the wheels for the aircraft
+    //7.1 Add the rear, left and right tires/wheels
+    //7.2 Add the 
+  var wheelProtecGeom = new THREE.BoxGeometry(30,15,10);
+  var wheelProtecMat = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.red, shading:THREE.FlatShading});
   var wheelProtecR = new THREE.Mesh(wheelProtecGeom,wheelProtecMat);
   wheelProtecR.position.set(25,-20,25);
   this.mesh.add(wheelProtecR);
 
   var wheelTireGeom = new THREE.BoxGeometry(24,24,4);
-  var wheelTireMat = new THREE.MeshPhongMaterial({color:Colors.brownDark, shading:THREE.FlatShading});
+  var wheelTireMat = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.black, shading:THREE.FlatShading});
   var wheelTireR = new THREE.Mesh(wheelTireGeom,wheelTireMat);
   wheelTireR.position.set(25,-28,25);
 
   var wheelAxisGeom = new THREE.BoxGeometry(10,10,6);
-  var wheelAxisMat = new THREE.MeshPhongMaterial({color:Colors.brown, shading:THREE.FlatShading});
+  var wheelAxisMat = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.brown, shading:THREE.FlatShading});
   var wheelAxis = new THREE.Mesh(wheelAxisGeom,wheelAxisMat);
   wheelTireR.add(wheelAxis);
 
   this.mesh.add(wheelTireR);
 
-  var wheelProtecL = wheelProtecR.clone();
+  var wheelProtecL = wheelProtecR.clone();  
   wheelProtecL.position.z = -wheelProtecR.position.z ;
   this.mesh.add(wheelProtecL);
 
@@ -486,21 +482,23 @@ var AirPlane = function(){
   this.mesh.add(wheelTireL);
 
   var wheelTireB = wheelTireR.clone();
+  //back tire is smaller than the front left and right
+  //scaling by a  
   wheelTireB.scale.set(.5,.5,.5);
   wheelTireB.position.set(-35,-5,0);
   this.mesh.add(wheelTireB);
 
   var suspensionGeom = new THREE.BoxGeometry(4,20,4);
   suspensionGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,10,0))
-  var suspensionMat = new THREE.MeshPhongMaterial({color:Colors.red, shading:THREE.FlatShading});
+  var suspensionMat = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.red, shading:THREE.FlatShading});
   var suspension = new THREE.Mesh(suspensionGeom,suspensionMat);
   suspension.position.set(-35,-5,0);
   suspension.rotation.z = -.3;
   this.mesh.add(suspension);
 
-  this.pilot = new Pilot();
-  this.pilot.mesh.position.set(-10,27,0);
-  this.mesh.add(this.pilot.mesh);
+  // this.pilot = new Pilot();
+  // this.pilot.mesh.position.set(-10,27,0);
+  // this.mesh.add(this.pilot.mesh);
 
 
   this.mesh.castShadow = true;
@@ -508,510 +506,551 @@ var AirPlane = function(){
 
 };
 
+/* This function creates our aircraft. */ 
+function generateAircraft(){
+  aircraft = new Aircraft();
+  aircraft.mesh.scale.set(.25,.25,.25);
+  aircraft.mesh.position.y = controller.aircraftDefaultHeight;
+  scene.add(aircraft.mesh);
+}
+
+/* This function is used to update the postion of the bullet.
+  Also, it handles the collision of aircraft with meteors
+  and appropriately triggers the code for generating meteor
+  fragments upon collision */ 
+function updateAircraft(){
+
+  controller.aircraftSpeed = normalize(currMousePtrLoc.x,-.5,.5,controller.minAircraftSpeed, controller.maxAircraftSpeed);
+  var targetY = normalize(currMousePtrLoc.y,-.75,.75, controller.aircraftDefaultHeight-controller.aircraftAmplitudeHt, controller.aircraftDefaultHeight+controller.aircraftAmplitudeHt);
+  var targetX = normalize(currMousePtrLoc.x,-1,1,-controller.aircraftAmplitudeWdth*0.7, -controller.aircraftAmplitudeWdth);
+
+  controller.aircraftCollisionXDisplacement += controller.aircraftCollisionXSpeed;
+  targetX += controller.aircraftCollisionXDisplacement;
+
+
+  controller.aircraftCollisionYSpeed += controller.aircraftCollisionYSpeed;
+  targetY += controller.aircraftCollisionYSpeed;
+
+  aircraft.mesh.position.y += (targetY-aircraft.mesh.position.y)*dT*controller.aircraftMovementSensi;
+  aircraft.mesh.position.x += (targetX-aircraft.mesh.position.x)*dT*controller.aircraftMovementSensi;
+
+  aircraft.mesh.rotation.z = (targetY-aircraft.mesh.position.y)*dT*controller.aircraftRotationXSensi;
+  aircraft.mesh.rotation.x = (aircraft.mesh.position.y-targetY)*dT*controller.aircraftRotationZSensi;
+  var targetCameraZ = normalize(controller.aircraftSpeed, controller.minAircraftSpeed, controller.maxAircraftSpeed, controller.nearPosOfCamera, controller.farPosOfCamera);
+  perspCam.fov = normalize(currMousePtrLoc.x,-1,1,40, 80);
+  perspCam.updateProjectionMatrix ()
+  perspCam.position.y += (aircraft.mesh.position.y - perspCam.position.y)*dT*controller.cameraSensivity;
+
+  controller.aircraftCollisionXSpeed += (0-controller.aircraftCollisionXSpeed)*dT * 0.03;
+  controller.aircraftCollisionXDisplacement += (0-controller.aircraftCollisionXDisplacement)*dT *0.01;
+  controller.aircraftCollisionYSpeed += (0-controller.aircraftCollisionYSpeed)*dT * 0.03;
+  controller.aircraftCollisionYSpeed += (0-controller.aircraftCollisionYSpeed)*dT *0.01;
+}
+
+/**************** 3: SKY ************ */
+/* ****************Functions related to creation of the sky.*************************** */
+/* This function creates the sky. */ 
 Sky = function() {
   this.mesh = new THREE.Object3D();
   this.nClouds = 20;
   this.clouds = [];
   var stepAngle = Math.PI*2 / this.nClouds;
-  for(var i=0; i<this.nClouds; i++){
-    var c = new Cloud();
-    this.clouds.push(c);
-    var a = stepAngle*i;
-    var h = game.seaRadius + 150 + Math.random()*200;
-    c.mesh.position.y = Math.sin(a)*h;
-    c.mesh.position.x = Math.cos(a)*h;
-    c.mesh.position.z = -300-Math.random()*500;
-    c.mesh.rotation.z = a + Math.PI/2;
-    var s = 1+Math.random()*2;
-    c.mesh.scale.set(s,s,s);
-    this.mesh.add(c.mesh);
+  for(var i=0; i<this.nClouds; i++){    // creating and populating clouds in sky.
+    var cloud = new Cloud();
+    this.clouds.push(cloud);
+    var ang = stepAngle*i;
+    var ht = controller.radiusOfSea + Math.random()*200 + 150;
+    cloud.mesh.position.x = ht*(Math.cos(ang));
+    cloud.mesh.position.y = ht*(Math.sin(ang));
+    cloud.mesh.rotation.z = ang + Math.PI/2;
+    cloud.mesh.position.z = -300-(Math.random()*500);
+    var scl = 1+(Math.random()*2);
+    cloud.mesh.scale.set(scl,scl,scl);
+    this.mesh.add(cloud.mesh);       // adding clouds to sky mesh.
   }
 }
 
+/* This function creates our sky. */
+function generateSky(){
+  sky = new Sky();
+  sky.mesh.position.y = -controller.radiusOfSea;
+  scene.add(sky.mesh);
+}
+
+/* This function move clouds in sky. */
 Sky.prototype.moveClouds = function(){
-  for(var i=0; i<this.nClouds; i++){
-    var c = this.clouds[i];
-    c.rotate();
+  for(var k=0; k<this.nClouds; k++){
+    var cld = this.clouds[k];
+    cld.rotate();
   }
-  this.mesh.rotation.z += game.speed*deltaTime;
-
+  this.mesh.rotation.z += controller.speed*dT;
 }
 
-Sea = function(){
-  var geom = new THREE.CylinderGeometry(game.seaRadius,game.seaRadius,game.seaLength,40,10);
-  geom.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI/2));
-  geom.mergeVertices();
-  var l = geom.vertices.length;
+
+/**************** 4: OCEAN ************ */
+/* *******************Function related to ocean creation.******************** */
+/* Function used for creating ocean. */ 
+Ocean = function(){
+  var geo = new THREE.CylinderGeometry(controller.radiusOfSea,controller.radiusOfSea,controller.lengthOfSea,40,10);
+  geo.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI/2));
+  geo.mergeVertices();
+  var lengthOfVer = geo.vertices.length;
 
   this.waves = [];
 
-  for (var i=0;i<l;i++){
-    var v = geom.vertices[i];
-    //v.y = Math.random()*30;
-    this.waves.push({y:v.y, x:v.x, z:v.z, ang:Math.random()*Math.PI*2, amp:game.wavesMinAmp + Math.random()*(game.wavesMaxAmp-game.wavesMinAmp), speed:game.wavesMinSpeed + Math.random()*(game.wavesMaxSpeed - game.wavesMinSpeed)});
+  for (var i=0;i<lengthOfVer;i++){
+    var vert = geo.vertices[i];
+    this.waves.push({y:vert.y, x:vert.x, z:vert.z, ang:Math.random()*Math.PI*2, amp:controller.minSizeOfWaves + Math.random()*(controller.maxSizeOfWaves-controller.minSizeOfWaves), speed:controller.minSpeedOfWaves + Math.random()*(controller.maxSpeedOfWaves - controller.minSpeedOfWaves)});
   };
-  var mat = new THREE.MeshPhongMaterial({
-    color:Colors.blue,
-    transparent:true,
-    opacity:.9,
+  var matr = new THREE.MeshPhongMaterial({
+    color: usefulColours.lightOceanGreen,
+    transparent: true,
+    opacity:.7,
     shading:THREE.FlatShading,
 
   });
-
-  this.mesh = new THREE.Mesh(geom, mat);
+  this.mesh = new THREE.Mesh(geo, matr);
   this.mesh.name = "waves";
   this.mesh.receiveShadow = true;
-
 }
 
-Sea.prototype.moveWaves = function (){
+/* This function creates our set of clouds. */
+function generateOcean(){
+  ocean = new Ocean();
+  ocean.mesh.position.y = -controller.radiusOfSea;
+  scene.add(ocean.mesh);
+}
+
+/* Function to make and move waves in ocean */ 
+Ocean.prototype.moveWaves = function (){
   var verts = this.mesh.geometry.vertices;
-  var l = verts.length;
-  for (var i=0; i<l; i++){
-    var v = verts[i];
-    var vprops = this.waves[i];
-    v.x =  vprops.x + Math.cos(vprops.ang)*vprops.amp;
-    v.y = vprops.y + Math.sin(vprops.ang)*vprops.amp;
-    vprops.ang += vprops.speed*deltaTime;
+  var vertLen = verts.length;
+  for (var i=0; i<vertLen; i++){
+    var singleVert = verts[i];
+    var vertexOfWaves = this.waves[i];
+    singleVert.x =  vertexOfWaves.x + Math.cos(vertexOfWaves.ang)*vertexOfWaves.amp;
+    singleVert.y = vertexOfWaves.y + vertexOfWaves.amp*(Math.sin(vertexOfWaves.ang));
+    vertexOfWaves.ang += vertexOfWaves.speed*dT;
     this.mesh.geometry.verticesNeedUpdate=true;
   }
 }
 
+
+/**************** 5: CLOUDS ************ */
+/* *******Functions related to creation and movement of clouds************* */
+
+/* Function for creating clouds.  */ 
 Cloud = function(){
   this.mesh = new THREE.Object3D();
   this.mesh.name = "cloud";
-  var geom = new THREE.CubeGeometry(20,20,20);
-  var mat = new THREE.MeshPhongMaterial({
-    color:Colors.silver,
-
-  });
-
-  //*
-  var nBlocs = 3+Math.floor(Math.random()*3);
-  for (var i=0; i<nBlocs; i++ ){
-    var m = new THREE.Mesh(geom.clone(), mat);
-    m.position.x = i*15;
-    m.position.y = Math.random()*10;
-    m.position.z = Math.random()*10;
-    m.rotation.z = Math.random()*Math.PI*2;
-    m.rotation.y = Math.random()*Math.PI*2;
-    var s = .1 + Math.random()*.9;
-    m.scale.set(s,s,s);
-    this.mesh.add(m);
-    m.castShadow = true;
-    m.receiveShadow = true;
-
+  var geomet = new THREE.CubeGeometry(20,20,20);
+  var matr = new THREE.MeshPhongMaterial({color:usefulColours.silver,});
+  var nBlocks = 3 + (Math.floor(Math.random()*3));
+  for (var i=0; i<nBlocks; i++ ){
+    var mesH = new THREE.Mesh(geomet.clone(), matr);
+    mesH.position.x = i*15;
+    mesH.position.y = Math.random()*10;
+    mesH.position.z = Math.random()*10;
+    mesH.rotation.y = 2*(Math.random()*Math.PI);
+    mesH.rotation.z = 2*(Math.random()*Math.PI);
+    var sRand = .1 + Math.random()*.9;
+    mesH.scale.set(sRand,sRand,sRand);
+    mesH.castShadow = true;
+    mesH.receiveShadow = true;
+    this.mesh.add(mesH);
   }
-  //*/
 }
 
+/* Functions used for rotating the clouds. */ 
 Cloud.prototype.rotate = function(){
-  var l = this.mesh.children.length;
-  for(var i=0; i<l; i++){
-    var m = this.mesh.children[i];
-    m.rotation.z+= Math.random()*.005*(i+1);
-    m.rotation.y+= Math.random()*.002*(i+1);
+  var len = this.mesh.children.length;
+  for(var i=0; i<len; i++){
+    var mChild = this.mesh.children[i];
+    //console.log(mChild);
+    mChild.rotation.y+= Math.random()*(i+1)*.002;
+    mChild.rotation.z+= Math.random()*(i+1)*.005;
   }
 }
 
-Ennemy = function(){
+
+/**************** 6: Enemy Meteors  ************ */
+/* *******************Functions used for creating enemy meteors obstacles***************** */
+
+/*  This function creates a single meteor obstacle. */
+Meteor = function(){
   var geom = new THREE.TetrahedronGeometry(8,2);
-  var mat = new THREE.MeshPhongMaterial({
-    color:Colors.red,
-    shininess:0,
-    specular:0xffffff,
-    shading:THREE.FlatShading
-  });
-  this.mesh = new THREE.Mesh(geom,mat);
+  var matrl = new THREE.MeshPhongMaterial({color:usefulColours.violet, shininess:0, specular:0xffffff,shading:THREE.FlatShading});
+  this.mesh = new THREE.Mesh(geom,matrl);
   this.mesh.castShadow = true;
   this.angle = 0;
   this.dist = 0;
 }
 
-EnnemiesHolder = function (){
+/*  This function populates the meteor holder.   */
+MeteorsHolder = function (){
   this.mesh = new THREE.Object3D();
-  this.ennemiesInUse = [];
+  this.meteorsInUse = [];
 }
 
-EnnemiesHolder.prototype.spawnEnnemies = function(){
-  var nEnnemies = game.level;
+/* This function creates meteors and adds them to scene. */
+function generateMeteors(){
+  for (var i=0; i<10; i++){
+    var meteor = new Meteor();
+    meteorsPool.push(meteor);
+  }
+  meteorsHolder = new MeteorsHolder();
+  scene.add(meteorsHolder.mesh)
+}
 
-  for (var i=0; i<nEnnemies; i++){
-    var ennemy;
-    if (ennemiesPool.length) {
-      ennemy = ennemiesPool.pop();
+/* This function creates a set of meteor obstacles. */
+MeteorsHolder.prototype.spawnMeteors = function(){
+  var nmeteors = controller.stage;
+
+  for (var i=0; i<nmeteors; i++){
+    var meteor;
+    if (meteorsPool.length) {
+      meteor = meteorsPool.pop();
     }else{
-      ennemy = new Ennemy();
+      meteor = new Meteor();
     }
 
-    ennemy.angle = - (i*0.1);
-    ennemy.distance = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * game.planeAmpHeight;
-    ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
-    ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
+    meteor.angle = - (i*0.1);
+    meteor.pointsScored = controller.aircraftDefaultHeight + controller.radiusOfSea +  (-1 + Math.random() * 2) * controller.aircraftAmplitudeHt;
+    meteor.mesh.position.x = Math.cos(meteor.angle)*meteor.pointsScored;
+    meteor.mesh.position.y = -(controller.radiusOfSea) + Math.sin(meteor.angle)*meteor.pointsScored;
 
-    this.mesh.add(ennemy.mesh);
-    this.ennemiesInUse.push(ennemy);
+    this.mesh.add(meteor.mesh);
+    this.meteorsInUse.push(meteor);
   }
 }
 
-EnnemiesHolder.prototype.rotateEnnemies = function(){
-  for (var i=0; i<this.ennemiesInUse.length; i++){
-    var ennemy = this.ennemiesInUse[i];
-    ennemy.angle += game.speed*deltaTime*game.ennemiesSpeed;
+/*This function rotates meteor obstacles on their place (rotational motion). */
+MeteorsHolder.prototype.rotateMeteors = function(){
+  for (var i=0; i<this.meteorsInUse.length; i++){
+    var meteor = this.meteorsInUse[i];
+    meteor.angle += controller.speed*controller.meteorsSpeed*dT;
 
-    if (ennemy.angle > Math.PI*2) ennemy.angle -= Math.PI*2;
+    if (meteor.angle > Math.PI*2) 
+        meteor.angle -= Math.PI*2;
 
-    ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
-    ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
-    ennemy.mesh.rotation.z += Math.random()*.1;
-    ennemy.mesh.rotation.y += Math.random()*.1;
+    meteor.mesh.position.y = -(controller.radiusOfSea) + Math.sin(meteor.angle)*meteor.pointsScored;
+    meteor.mesh.position.x = Math.cos(meteor.angle)*meteor.pointsScored;
+    meteor.mesh.rotation.y += (Math.random())*.1;
+    meteor.mesh.rotation.z += (Math.random())*.1;
 
-    //var globalEnnemyPosition =  ennemy.mesh.localToWorld(new THREE.Vector3());
-    var diffPos = airplane.mesh.position.clone().sub(ennemy.mesh.position.clone());
-    var d = diffPos.length();
-    if (d<game.ennemyDistanceTolerance){
-      particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
+    var diff_position = aircraft.mesh.position.clone().sub(meteor.mesh.position.clone());
+    var diff = diff_position.length();
+    if (diff < controller.distanceToleranceInMeteor){
+      fragmentsHolder.spawnFragments(meteor.mesh.position.clone(), 15, usefulColours.violet, 3);
 
-      ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-      this.mesh.remove(ennemy.mesh);
-      game.planeCollisionSpeedX = 100 * diffPos.x / d;
-      game.planeCollisionSpeedY = 100 * diffPos.y / d;
-      ambientLight.intensity = 2;
-      var enemy_planeSound = new Audio('sounds/rockBreaking.wav');
-      enemy_planeSound.play();
-      enemy_planeSound.volume = 0.8;
+      meteorsPool.unshift(this.meteorsInUse.splice(i,1)[0]);
+      this.mesh.remove(meteor.mesh);
+      controller.aircraftCollisionXSpeed = 100 * diff_position.x / diff;
+      controller.aircraftCollisionYSpeed = 100 * diff_position.y / diff;
+      ambLight.intensity = 2;
+      var meteor_planeSound = new Audio('sounds/rockBreaking.wav');
+      meteor_planeSound.play();
+      meteor_planeSound.volume = 1;
       removeEnergy();
       i--;
-    }else if (ennemy.angle > Math.PI){
-      ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-      this.mesh.remove(ennemy.mesh);
+    }else if (meteor.angle > Math.PI){
+      meteorsPool.unshift(this.meteorsInUse.splice(i,1)[0]);
+      this.mesh.remove(meteor.mesh);
       i--;
     }
   }
 }
 
-Particle = function(){
-  var geom = new THREE.TetrahedronGeometry(3,0);
-  var mat = new THREE.MeshPhongMaterial({
-    color:0x009999,
-    shininess:0,
-    specular:0xffffff,
-    shading:THREE.FlatShading
-  });
-  this.mesh = new THREE.Mesh(geom,mat);
+
+/**************** 7: METEOR FRAGMENTS  ************ */
+/* **********Functions used for fragements when meteors explode************ */
+/*This function creates individual fragments of the obstacle meteors.*/
+Fragment = function(){
+  var geomt = new THREE.TetrahedronGeometry(3,0);
+  var matrl = new THREE.MeshPhongMaterial({color:0x009999,shininess:0,specular:0xffffff,shading:THREE.FlatShading});
+  this.mesh = new THREE.Mesh(geomt,matrl);
 }
 
-Particle.prototype.explode = function(pos, color, scale){
-  var _this = this;
-  var _p = this.mesh.parent;
+/* This function populates the object which holdes the particles generated from breaking of meteors. */
+FragmentsHolder = function (){
+  this.mesh = new THREE.Object3D();
+}
+
+/* This function generates the fragments of the metoers after it's destruction and add those fragements to the scene. */
+function generateFragments(){
+  for (var i=0; i<10; i++){
+    var fragment = new Fragment();
+    fragmentsPool.push(fragment);
+  }
+  fragmentsHolder = new FragmentsHolder();
+  scene.add(fragmentsHolder.mesh)  
+}
+
+/* This function creates graphics for exploading meteor.  Here we are using TweenMax library available in Three js 
+   which is responsible for effects related to breaking and movement of meteor particles after explosion.*/
+Fragment.prototype.explode = function(postn, color, scale){
+  var thisObject = this;
+  var parentObj = this.mesh.parent;
   this.mesh.material.color = new THREE.Color(color);
   this.mesh.material.needsUpdate = true;
   this.mesh.scale.set(scale, scale, scale);
-  var targetX = pos.x + (-1 + Math.random()*2)*50;
-  var targetY = pos.y + (-1 + Math.random()*2)*50;
-  var speed = .6+Math.random()*.2;
-  TweenMax.to(this.mesh.rotation, speed, {x:Math.random()*12, y:Math.random()*12});
+  var tgtY = postn.y + 50*(-1 + Math.random()*2);
+  var tgtX = postn.x + 50*(-1 + Math.random()*2);
+  var speed = .6 + (Math.random()*(.2));
+  TweenMax.to(this.mesh.rotation, speed, {x:Math.random()*12, y:Math.random()*12});   // using Twin Max Library in Three js
   TweenMax.to(this.mesh.scale, speed, {x:.1, y:.1, z:.1});
-  TweenMax.to(this.mesh.position, speed, {x:targetX, y:targetY, delay:Math.random() *.1, ease:Power2.easeOut, onComplete:function(){
-      if(_p) _p.remove(_this.mesh);
-      _this.mesh.scale.set(1,1,1);
-      particlesPool.unshift(_this);
+  TweenMax.to(this.mesh.position, speed, {x:tgtX, y:tgtY, delay:Math.random() *.1, ease:Power2.easeOut, onComplete:function(){
+      if(parentObj) parentObj.remove(thisObject.mesh);
+      thisObject.mesh.scale.set(1,1,1);
+      fragmentsPool.unshift(thisObject);
     }});
 }
 
-ParticlesHolder = function (){
-  this.mesh = new THREE.Object3D();
-  this.particlesInUse = [];
-}
+FragmentsHolder.prototype.spawnFragments = function(postn, density, color, scale){
 
-ParticlesHolder.prototype.spawnParticles = function(pos, density, color, scale){
-
-  var nPArticles = density;
-  for (var i=0; i<nPArticles; i++){
-    var particle;
-    if (particlesPool.length) {
-      particle = particlesPool.pop();
+  var nParticles = density;
+  for (var i=0; i<nParticles; i++){
+    var frag;
+    if (fragmentsPool.length) {
+      frag = fragmentsPool.pop();
     }else{
-      particle = new Particle();
+      frag = new Fragment();
     }
-    this.mesh.add(particle.mesh);
-    particle.mesh.visible = true;
+    this.mesh.add(frag.mesh);
+    frag.mesh.visible = true;
     var _this = this;
-    particle.mesh.position.y = pos.y;
-    particle.mesh.position.x = pos.x;
-    particle.explode(pos,color, scale);
+    frag.mesh.position.y = postn.y;
+    frag.mesh.position.x = postn.x;
+    frag.explode(postn,color, scale);
   }
 }
 
-Coin = function(){
-  var geom = new THREE.TetrahedronGeometry(5,0);
-  var mat = new THREE.MeshPhongMaterial({
-    color:0x009999,
-    shininess:0,
-    specular:0xffffff,
 
-    shading:THREE.FlatShading
-  });
-  this.mesh = new THREE.Mesh(geom,mat);
-  this.mesh.castShadow = true;
-  this.angle = 0;
-  this.dist = 0;
+/**************** 8: Jewels  ************ */
+/* Functions for creating, collecting and movement of jewels. */
+
+/* This function creates a single jewel object and set values of it's properties. */
+Jewel = function(){
+  var geomt = new THREE.TetrahedronGeometry(5,0);
+  var matrl = new THREE.MeshPhongMaterial({color: usefulColours.limeGreen,shininess:0, specular:0xffffff, shading:THREE.FlatShading});
+  this.mesh = new THREE.Mesh(geomt,matrl);
+  this.mesh.castShadow = true; // shadow activated
+  this.angle = 0;  // setting angle to be 0
+  this.dist = 0;   // setting distance to be 0
 }
 
-CoinsHolder = function (nCoins){
+/* This function function creates the given no of jewels and populates the object which holdes the jewels.*/
+JewelsHolder = function (jewels){
   this.mesh = new THREE.Object3D();
-  this.coinsInUse = [];
-  this.coinsPool = [];
-  for (var i=0; i<nCoins; i++){
-    var coin = new Coin();
-    this.coinsPool.push(coin);
+  this.jewelsInUse = [];
+  this.jewelsPool = [];
+  for (var k=0; k < jewels; k++){
+    var jwl = new Jewel();
+    this.jewelsPool.push(jwl);
   }
 }
 
-CoinsHolder.prototype.spawnCoins = function(){
+/*This function creates a set of jewels and adds them to scene. */
+function generateJewels(){
 
-  var nCoins = 1 + Math.floor(Math.random()*10);
-  var d = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * game.planeAmpHeight;
-  var amplitude = 10 + Math.round(Math.random()*10);
-  for (var i=0; i<nCoins; i++){
-    var coin;
-    if (this.coinsPool.length) {
-      coin = this.coinsPool.pop();
+  jewelsHolder = new JewelsHolder(20);
+  scene.add(jewelsHolder.mesh)
+}
+
+/* This functions is used to generate jewels. */
+JewelsHolder.prototype.spawnJewels = function(){
+
+  var jewelN = 1 + Math.floor(Math.random()*10);
+  var distance_from_sea = controller.radiusOfSea + controller.aircraftDefaultHeight + (-1 + Math.random() * 2) * controller.aircraftAmplitudeHt;
+  var amplitude = Math.round(Math.random()*10) + 10;
+  for (var i=0; i<jewelN; i++){
+    var jewel;
+    if (this.jewelsPool.length) {
+      jewel = this.jewelsPool.pop();
     }else{
-      coin = new Coin();
+      jewel = new Jewel();
     }
-    this.mesh.add(coin.mesh);
-    this.coinsInUse.push(coin);
-    coin.angle = - (i*0.02);
-    coin.distance = d + Math.cos(i*.5)*amplitude;
-    coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
-    coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
+    this.mesh.add(jewel.mesh);
+    this.jewelsInUse.push(jewel);
+    jewel.angle = - (i*0.02);
+    jewel.pointsScored = distance_from_sea + Math.cos(i*.5)*amplitude;
+    jewel.mesh.position.y = -controller.radiusOfSea + Math.sin(jewel.angle)*jewel.pointsScored;
+    jewel.mesh.position.x = Math.cos(jewel.angle)*jewel.pointsScored;
   }
 }
+/* This functions move the current set of jewels. It also checks whether a jewel is collected by aircraft or not. */
+JewelsHolder.prototype.rotateJewels = function(){
+  for (var i=0; i<this.jewelsInUse.length; i++){
+    var jewel = this.jewelsInUse[i];
+    if (jewel.exploding) continue;
+    jewel.angle += controller.speed*controller.speedOfJewel*dT;
+    if (jewel.angle>Math.PI*2) jewel.angle -= Math.PI*2;
+    jewel.mesh.position.x = Math.cos(jewel.angle)*jewel.pointsScored;
+    jewel.mesh.position.y = -controller.radiusOfSea + jewel.pointsScored*(Math.sin(jewel.angle));
+    jewel.mesh.rotation.y += Math.random()*.1;
+    jewel.mesh.rotation.z += Math.random()*.1;
 
-CoinsHolder.prototype.rotateCoins = function(){
-  for (var i=0; i<this.coinsInUse.length; i++){
-    var coin = this.coinsInUse[i];
-    if (coin.exploding) continue;
-    coin.angle += game.speed*deltaTime*game.coinsSpeed;
-    if (coin.angle>Math.PI*2) coin.angle -= Math.PI*2;
-    coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
-    coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
-    coin.mesh.rotation.z += Math.random()*.1;
-    coin.mesh.rotation.y += Math.random()*.1;
-
-    //var globalCoinPosition =  coin.mesh.localToWorld(new THREE.Vector3());
-    var diffPos = airplane.mesh.position.clone().sub(coin.mesh.position.clone());
-    var d = diffPos.length();
-    if (d<game.coinDistanceTolerance){
-      this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
-      this.mesh.remove(coin.mesh);
-      particlesHolder.spawnParticles(coin.mesh.position.clone(), 5, 0x009999, .8);
+    var diff_position = aircraft.mesh.position.clone().sub(jewel.mesh.position.clone());
+    var diff = diff_position.length();
+    if (diff < controller.jewelDistanceToler){
+      this.jewelsPool.unshift(this.jewelsInUse.splice(i,1)[0]);
+      this.mesh.remove(jewel.mesh);
+      fragmentsHolder.spawnFragments(jewel.mesh.position.clone(), 5, 0x009999, .8);
       addEnergy();
+      var jewelSound = new Audio("sounds/jewel.mp3");
+      jewelSound.play();
+      jewelSound.volume = 0.6;
       i--;
-    }else if (coin.angle > Math.PI){
-      this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
-      this.mesh.remove(coin.mesh);
+    }else if (jewel.angle > Math.PI){
+      this.jewelsPool.unshift(this.jewelsInUse.splice(i,1)[0]);
+      this.mesh.remove(jewel.mesh);
       i--;
     }
   }
 }
 
-// 3D Models
-var sea;
-var airplane;
-
-function createPlane(){
-  airplane = new AirPlane();
-  airplane.mesh.scale.set(.25,.25,.25);
-  airplane.mesh.position.y = game.planeDefaultHeight;
-  scene.add(airplane.mesh);
-}
-
-function createSea(){
-  sea = new Sea();
-  sea.mesh.position.y = -game.seaRadius;
-  scene.add(sea.mesh);
-}
-
-function createSky(){
-  sky = new Sky();
-  sky.mesh.position.y = -game.seaRadius;
-  scene.add(sky.mesh);
-}
-
-function createCoins(){
-
-  coinsHolder = new CoinsHolder(20);
-  scene.add(coinsHolder.mesh)
-}
-
-function createEnnemies(){
-  for (var i=0; i<10; i++){
-    var ennemy = new Ennemy();
-    ennemiesPool.push(ennemy);
-  }
-  ennemiesHolder = new EnnemiesHolder();
-  //ennemiesHolder.mesh.position.y = -game.seaRadius;
-  scene.add(ennemiesHolder.mesh)
-}
-
-function createParticles(){
-  for (var i=0; i<10; i++){
-    var particle = new Particle();
-    particlesPool.push(particle);
-  }
-  particlesHolder = new ParticlesHolder();
-  //ennemiesHolder.mesh.position.y = -game.seaRadius;
-  scene.add(particlesHolder.mesh)
-}
-
+/* This function get executed at the beginning of each animation frame. 
+   In this function all objects (such as jewles, aircraft etc) gets updated
+    depending upon the current state of the game. */
 function loop(){
+  
+  currFrameTime = new Date().getTime();
+  dT = currFrameTime-prevFrameTime;
+  prevFrameTime = currFrameTime;
+  // checking current state of the game and performing actions depending upon them.
 
-  newTime = new Date().getTime();
-  deltaTime = newTime-oldTime;
-  oldTime = newTime;
-
-  if (game.status=="playing"){
-
-    // Add energy coins every 100m;
-    if (Math.floor(game.distance)%game.distanceForCoinsSpawn == 0 && Math.floor(game.distance) > game.coinLastSpawn){
-      game.coinLastSpawn = Math.floor(game.distance);
-      coinsHolder.spawnCoins();
+  if(controller.stateOfGame == "notStarted"){
+      showStart();
+      controller.stateOfGame = "waitingForStart";
+  }
+  else if(controller.stateOfGame == "waitingForStart"){
+    
+  }
+  else if (controller.stateOfGame=="currentlyInGame"){
+    // Add health jewels for every 100m;
+    if (Math.floor(controller.pointsScored)%controller.jewelSpawnDistance == 0 && Math.floor(controller.pointsScored) > controller.lastSpawnOfJewel){
+      controller.lastSpawnOfJewel = Math.floor(controller.pointsScored);
+      jewelsHolder.spawnJewels();
     }
 
-    // Add speed to the airplane
-    if (Math.floor(game.distance)%game.distanceForSpeedUpdate == 0 && Math.floor(game.distance) > game.speedLastUpdate){
-      game.speedLastUpdate = Math.floor(game.distance);
-      game.targetBaseSpeed += game.incrementSpeedByTime*deltaTime;
+    // Increase speed to the aircraft
+    if (Math.floor(controller.pointsScored)%controller.distToUpdateSpeed == 0 && Math.floor(controller.pointsScored) > controller.lastUpdatedSpeed){
+      controller.lastUpdatedSpeed = Math.floor(controller.pointsScored);
+      controller.targetBaseSpeed += controller.increaseSpeedWithTime*dT;
+    }
+
+    // Add obstacles meteor for every 100m.
+    if (Math.floor(controller.pointsScored)%controller.meteorSpawnDistance == 0 && Math.floor(controller.pointsScored) > controller.lastSpawnOfMeteor){
+      controller.lastSpawnOfMeteor = Math.floor(controller.pointsScored);
+      meteorsHolder.spawnMeteors();
+    }
+
+    // increment stage variable and sound for level up.
+    if (Math.floor(controller.pointsScored)%controller.distanceForStageUpdate == 0 && Math.floor(controller.pointsScored) > controller.stageLastUpdate){
+      controller.stageLastUpdate = Math.floor(controller.pointsScored);
+      controller.stage++;
+      stageField.innerHTML = Math.floor(controller.stage);
+      controller.bulletCount = controller.stage * 2;
+      bulletVal.innerHTML = Math.floor(controller.bulletCount);
+      controller.targetBaseSpeed = controller.startSpeed + controller.increaseSpeedWithLevel*controller.stage;
+      var levelUp = new Audio("sounds/levelUp.mp3");
+      levelUp.play();
+      levelUp.volume = 1;
+
     }
 
 
-    if (Math.floor(game.distance)%game.distanceForEnnemiesSpawn == 0 && Math.floor(game.distance) > game.ennemyLastSpawn){
-      game.ennemyLastSpawn = Math.floor(game.distance);
-      ennemiesHolder.spawnEnnemies();
-    }
-
-    if (Math.floor(game.distance)%game.distanceForLevelUpdate == 0 && Math.floor(game.distance) > game.levelLastUpdate){
-      game.levelLastUpdate = Math.floor(game.distance);
-      game.level++;
-      fieldLevel.innerHTML = Math.floor(game.level);
-      game.bulletCount = game.level * 2;
-      bulletVal.innerHTML = Math.floor(game.bulletCount);
-      game.targetBaseSpeed = game.initSpeed + game.incrementSpeedByLevel*game.level
-    }
-
-
-    updatePlane();
-    updateDistance();
+    updateAircraft();
+    updatePoints();
     updateEnergy();
     updateBullet();
-    game.baseSpeed += (game.targetBaseSpeed - game.baseSpeed) * deltaTime * 0.02;
-    game.speed = game.baseSpeed * game.planeSpeed;
+    
+    // increasing speed of aircraft.
+    controller.baseSpeed += (controller.targetBaseSpeed - controller.baseSpeed)* 0.02 * dT;
+    controller.speed = controller.baseSpeed * controller.aircraftSpeed;
 
-  }else if(game.status=="gameover"){
-    game.speed *= .99;
-    airplane.mesh.rotation.z += (-Math.PI/2 - airplane.mesh.rotation.z)*.0002*deltaTime;
-    airplane.mesh.rotation.x += 0.0003*deltaTime;
-    game.planeFallSpeed *= 1.05;
-    airplane.mesh.position.y -= game.planeFallSpeed*deltaTime;
+  }else if(controller.stateOfGame=="gameIsOver"){   // when game gets over show message and await for restart.
+    controller.speed *= .99;
+    aircraft.mesh.rotation.z += (-Math.PI/2 - aircraft.mesh.rotation.z)*.0002*dT;
+    aircraft.mesh.rotation.x += 0.0003*dT;
+    controller.aircraftFallSpeed *= 1.05;
+    aircraft.mesh.position.y -= controller.aircraftFallSpeed*dT;
 
-    if (airplane.mesh.position.y <-200){
+    if (aircraft.mesh.position.y <-200){
       showReplay();
-      game.status = "waitingReplay";
+      controller.stateOfGame = "awaitingGameRestart";
 
     }
-  }else if (game.status=="waitingReplay"){
+  }else if (controller.stateOfGame=="awaitingGameRestart"){
 
   }
 
+  // updating aircraft rotation.
+  aircraft.rotor.rotation.x +=.2 + controller.aircraftSpeed * dT*.005;
+  
+  // updating ocean. 
+  ocean.mesh.rotation.z += controller.speed*dT;
 
-  airplane.propeller.rotation.x +=.2 + game.planeSpeed * deltaTime*.005;
-  sea.mesh.rotation.z += game.speed*deltaTime;//*game.seaRotationSpeed;
+  if ( ocean.mesh.rotation.z > 2*Math.PI)  
+      ocean.mesh.rotation.z -= 2*Math.PI;
 
-  if ( sea.mesh.rotation.z > 2*Math.PI)  sea.mesh.rotation.z -= 2*Math.PI;
+  ambLight.intensity += (.5 - ambLight.intensity)*dT*0.005;
 
-  ambientLight.intensity += (.5 - ambientLight.intensity)*deltaTime*0.005;
+  // moving jewels.
+  jewelsHolder.rotateJewels();
+  meteorsHolder.rotateMeteors();
 
-  coinsHolder.rotateCoins();
-  ennemiesHolder.rotateEnnemies();
-
+  // moving environment variables
   sky.moveClouds();
-  sea.moveWaves();
+  ocean.moveWaves();
 
-  renderer.render(scene, camera);
+  //rendering scene in webgl using prepective projection camera.
+  webGlRenderer.render(scene, perspCam);
   requestAnimationFrame(loop);
 }
 
-function updateDistance(){
-  game.distance += game.speed*deltaTime*game.ratioSpeedDistance;
-  fieldDistance.innerHTML = Math.floor(game.distance);
-  var d = 502*(1-(game.distance%game.distanceForLevelUpdate)/game.distanceForLevelUpdate);
-  levelCircle.setAttribute("stroke-dashoffset", d);
-
+/* This function updates points scored in game. */
+function updatePoints(){
+  controller.pointsScored += controller.speed*dT*controller.ratioOfSpeedDistance;
+  currPoints.innerHTML = Math.floor(controller.pointsScored);
+  var incrementPoints = 502*(1-(controller.pointsScored%controller.distanceForStageUpdate)/controller.distanceForStageUpdate);
+  stageContainer.setAttribute("stroke-dashoffset", incrementPoints);
 }
 
-var blinkEnergy=false;
-
+/* This function updates health of the aircraft. */
 function updateEnergy(){
-  game.energy -= game.speed*deltaTime*game.ratioSpeedEnergy;
-  game.energy = Math.max(0, game.energy);
-  energyBar.style.right = (100-game.energy)+"%";
-  energyBar.style.backgroundColor = (game.energy<50)? "#f25346" : "#68c3c0";
+  controller.health -= controller.speed*dT*controller.ratioOfSpeedEnergy;
+  controller.health = Math.max(0, controller.health); // updating health value.
+  healthMeterFill.style.right = (100-controller.health)+"%"; //stylng health meter.
+  healthMeterFill.style.backgroundColor = (controller.health<50)? "#f25346" : "#68c3c0"; //updating bg colour for health.
 
-  if (game.energy<30){
-    energyBar.style.animationName = "blinking";
+  if (controller.health<30){
+    healthMeterFill.style.animationName = "blinking";
   }else{
-    energyBar.style.animationName = "none";
+    healthMeterFill.style.animationName = "none";
   }
-
-  if (game.energy <1){
-    game.status = "gameover";
+  // updating health when game is over.
+  if (controller.health <1){
+    controller.stateOfGame = "gameIsOver";
+    var gOver = new Audio("sounds/gameOver.mp3");
+    gOver.play();
+    gOver.volume = 1;
   }
 }
 
+/* This function increments the health of the aircraft when it collects points. */
 function addEnergy(){
-  game.energy += game.coinValue;
-  game.energy = Math.min(game.energy, 100);
+  controller.health += controller.valueOfJewel;
+  controller.health = Math.min(controller.health, 100);
 }
 
+/* This function decreases health of the aircraft when it hits any meteor obstacle. */
 function removeEnergy(){
-  game.energy -= game.ennemyValue;
-  game.energy = Math.max(0, game.energy);
+  controller.health -= controller.healthLossByMeteor;
+  controller.health = Math.max(0, controller.health);
 }
 
-
-function updatePlane(){
-
-  game.planeSpeed = normalize(mousePos.x,-.5,.5,game.planeMinSpeed, game.planeMaxSpeed);
-  var targetY = normalize(mousePos.y,-.75,.75, game.planeDefaultHeight-game.planeAmpHeight, game.planeDefaultHeight+game.planeAmpHeight);
-  var targetX = normalize(mousePos.x,-1,1,-game.planeAmpWidth*0.7, -game.planeAmpWidth);
-
-  game.planeCollisionDisplacementX += game.planeCollisionSpeedX;
-  targetX += game.planeCollisionDisplacementX;
-
-
-  game.planeCollisionDisplacementY += game.planeCollisionSpeedY;
-  targetY += game.planeCollisionDisplacementY;
-
-  airplane.mesh.position.y += (targetY-airplane.mesh.position.y)*deltaTime*game.planeMoveSensivity;
-  airplane.mesh.position.x += (targetX-airplane.mesh.position.x)*deltaTime*game.planeMoveSensivity;
-
-  airplane.mesh.rotation.z = (targetY-airplane.mesh.position.y)*deltaTime*game.planeRotXSensivity;
-  airplane.mesh.rotation.x = (airplane.mesh.position.y-targetY)*deltaTime*game.planeRotZSensivity;
-  var targetCameraZ = normalize(game.planeSpeed, game.planeMinSpeed, game.planeMaxSpeed, game.cameraNearPos, game.cameraFarPos);
-  camera.fov = normalize(mousePos.x,-1,1,40, 80);
-  camera.updateProjectionMatrix ()
-  camera.position.y += (airplane.mesh.position.y - camera.position.y)*deltaTime*game.cameraSensivity;
-
-  game.planeCollisionSpeedX += (0-game.planeCollisionSpeedX)*deltaTime * 0.03;
-  game.planeCollisionDisplacementX += (0-game.planeCollisionDisplacementX)*deltaTime *0.01;
-  game.planeCollisionSpeedY += (0-game.planeCollisionSpeedY)*deltaTime * 0.03;
-  game.planeCollisionDisplacementY += (0-game.planeCollisionDisplacementY)*deltaTime *0.01;
-
-  airplane.pilot.updateHairs();
-}
-
+/***********These functions are used for showing messages on the screen at different states of the game. */ 
 function showReplay(){
   replayMessage.style.display="block";
 }
@@ -1020,6 +1059,15 @@ function hideReplay(){
   replayMessage.style.display="none";
 }
 
+function showStart(){
+  startMessage.style.display="block";
+}
+
+function hideStart(){
+  startMessage.style.display="none";
+}
+
+/* This function normalises world co-ordinates to the co-ordinates in window frame.(window - viewport transformation). */
 function normalize(v,vmin,vmax,tmin, tmax){
   var nv = Math.max(Math.min(v,vmax), vmin);  //normalizing the X/Y position of mouse by constraining it between vmin and vmax
   var dv = vmax-vmin;
@@ -1029,40 +1077,51 @@ function normalize(v,vmin,vmax,tmin, tmax){
   return tv;
 }
 
-var fieldDistance, energyBar, replayMessage, fieldLevel, levelCircle, bulletVal;
 
+/************* Standard function that initializes the game, renders objects and create animation frames. 
+ It is actually starting point of the whole game.  ***********/ 
 function init(event){
 
   //user interface
-
-  fieldDistance = document.getElementById("distValue");
-  energyBar = document.getElementById("energyBar");
+  startMessage = document.getElementById("clickToStartMsg");
+  currPoints = document.getElementById("distValue");
+  healthMeterFill = document.getElementById("healthMeterFill");
   replayMessage = document.getElementById("clickToReplayMsg");
-  fieldLevel = document.getElementById("levelValue");
+  stageField = document.getElementById("currStage");
   bulletVal = document.getElementById("bulletCount");
-  levelCircle = document.getElementById("levelCircleStroke");
+  stageContainer = document.getElementById("stageContainerStroke");
 
-  // var bckgrndSound = new Audio("sounds/background.mp3");
-  // bckgrndSound.loop = true;
-  // bckgrndSound.play();
-  // bckgrndSound.volume = 0.5;
-  resetGame();
-  createScene();
+  //event listeners for various events on the document
+  document.addEventListener('mousemove', mousePtrMoveHandler, false);
+  document.addEventListener('mouseup', mouseClickReleaseHandler, false); 
+  document.addEventListener('keyup', keyButtonReleaseHandler, false);
+  document.addEventListener('keydown', keyButtonPressHandler, false);
 
-  createLights();
-  createPlane();
-  createSea();
-  createSky();
-  createCoins();
-  createEnnemies();
-  createParticles();
+  //restart the game
+  generateNewGame();
+  //set the scene
+  generateScene();
+  //can now add window resize handler since scene is created
+  window.addEventListener('resize', windowSizeChangeHandler, false);
+  //set the lighting
+  generateLighting();
 
-  document.addEventListener('mousemove', handleMouseMove, false);
-  document.addEventListener('mouseup', handleMouseUp, false); 
-  document.addEventListener('keyup', handleKeyUp, false);
-  document.addEventListener('keydown', handleKeyDown, false);
+  //make the aircraft
+  generateAircraft();
+  //make the ocean
+  generateOcean();
+  //make the sky
+  generateSky();
+  //make the jewels
+  generateJewels();
+  //make the meteors/obstacles
+  generateMeteors();
+  //make the meteor fragments
+  generateFragments();
 
+  //updating the animation frame.
   loop();
+  
 }
 
 window.addEventListener('load', init, false);
