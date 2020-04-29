@@ -3,7 +3,8 @@
 2017A7PS0145P  Aniruddha Mahajan
 2017A7PS0162P  Shreyas Srikrishna
 ***************************************
- */ 
+*/ 
+
 
 
 /* *********************************************************************
@@ -79,10 +80,12 @@ var usefulColours = { mediumAqua: 0x66CDAA, lightOceanGreen: 0x20B2AA, limeGreen
 the 'click to start' message  */
 var gameStarted = 0;
 
-/*Variable for  */
-var ocean, aircraft;
+/*Variables for various objects in the game environment. Their names are self explanatory*/
+var ocean, aircraft, sky;
 
-
+/*The following are variables that are associated with elements from the index.html file like 
+  current points, no. of bullets etc. These are used as handles so that the internal changes in 
+  the game parameters get reflected onto the UI */
 var currPoints, healthMeterFill, replayMessage, stageField, stageContainer, bulletVal, startMessage;
 
 /* *
@@ -171,6 +174,8 @@ function generateNewGame(){
         aircraftDefaultHeight:100,
         aircraftAmplitudeHt:80,
         aircraftAmplitudeWdth:75,
+        //Following sensitivity variables were created to adjust the result of mathematical calculations for 
+        //rotation and displacement of aircraft mesh.
         aircraftMovementSensi:0.005,
         aircraftRotationXSensi:0.0008,
         aircraftRotationZSensi:0.0004,
@@ -220,69 +225,6 @@ function generateNewGame(){
   bulletVal.innerHTML = Math.floor(controller.bulletCount);
 }
 
-/* *
- * FUNCTIONS FOR HANDLING ON SCREEN MOUSE/KEYBOARD EVENTS
- * These functions are passed as callbacks to the event listeners 
- *  */
-
- /* Handles resizing of the window  */
-function windowSizeChangeHandler() {
-  webGlRenderer.setSize(WIDTH, HEIGHT);
-  perspCam.aspect = WIDTH / HEIGHT;
-  //need to call the below function for the 
-  //attribute changes to take effect 
-  perspCam.updateProjectionMatrix();
-}
-
-/* Handles movement of mouse pointer  */
-function mousePtrMoveHandler(){
-  var adjustedX = (event.clientX / WIDTH)*2;
-  adjustedX--;
-  var adjustedY = (event.clientY / HEIGHT)*(-2);
-  adjustedY++;
-  currMousePtrLoc = {x:adjustedX, y:adjustedY};
-}
-
-/* Handles release of mouse click */
-function mouseClickReleaseHandler(event){
-  if (controller.stateOfGame == "awaitingGameRestart"){
-    hideReplay();
-    generateNewGame();
-  }
-}
-
-/* Handles pressing of a button on the keyboard  */
-function keyButtonPressHandler(event){
-  if (controller.stateOfGame == "awaitingGameRestart"){
-    generateNewGame();
-    hideReplay();
-  }
-  else if(controller.stateOfGame == "waitingForStart"){
-    hideStart();
-    generateNewGame();
-    var bgAudio = document.getElementById("backAudio");
-    if(bgAudio.canPlayType('audio/mp3')){
-      bgAudio.setAttribute('src','sounds/background.mp3');
-      console.log("WORKING");  
-      bgAudio.play();
-    }
-    controller.stateOfGame = "currentlyInGame";
-  }
-  else if(controller.stateOfGame == "currentlyInGame"){
-    if(canFireBullet == 1 && event.key == "x"){
-      generateBullet();
-      //console.log("\nheree");
-      canFireBullet = 0;
-    }
-  }
-}
-
-/* Handles releasing of a button on the keyboard  */
-function keyButtonReleaseHandler(event){
-  if(event.key == "x"){
-    canFireBullet = 1;
-  }
-}
 
 
 /* *
@@ -292,6 +234,7 @@ function keyButtonReleaseHandler(event){
  * ******AIRCRAFT,SKY,JEWELS,OCEAN, CLOUD,******
  * ******METEOR,FRAGMENTS----------------*******
   */
+
 
 /**************** 1: BULLET ************ */
 /* *******************Function related to bullet creation.******************** */
@@ -309,7 +252,7 @@ function generateBullet(){
     fireSound.volume = 0.6;
     controller.bulletCount--;
     if(controller.bulletCount == 0)
-      bulletVal.style.animationName = 'blinking';
+      bulletVal.style.animationName = 'flickering';
     bulletVal.innerHTML = Math.floor(controller.bulletCount);
     var newBullet = new Bullet();
     newBullet.mesh.position.copy(aircraft.rotor.getWorldPosition());
@@ -357,6 +300,8 @@ function updateBullet(){
 var Aircraft = function(){
   //1.Define the mesh as a generic 3D Object
     this.mesh = new THREE.Object3D();
+    this.mesh.castShadow = true;
+    this.mesh.receiveShadow = true;
     this.mesh.name = "aircraft";
 
   //2.Create the fuselage
@@ -452,95 +397,92 @@ var Aircraft = function(){
     //add the rotor to the aircraft's mesh
     this.mesh.add(this.rotor);
 
-  //7. Design the wheels for the aircraft
-    //7.1 Add the rear, left and right tires/wheels
-    //7.2 Add the 
-  var wheelProtecGeom = new THREE.BoxGeometry(30,15,10);
-  var wheelProtecMat = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.red, shading:THREE.FlatShading});
-  var wheelProtecR = new THREE.Mesh(wheelProtecGeom,wheelProtecMat);
-  wheelProtecR.position.set(25,-20,25);
-  this.mesh.add(wheelProtecR);
+  //7. Design the wheels/landing gear for the aircraft
+    //7.1 Add the right landing gear
+      var landingGearGeometry = new THREE.BoxGeometry(24,24,4);
+      var landingGearMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.black, shading:THREE.FlatShading});
+      var rightMainlandingGear = new THREE.Mesh(landingGearGeometry,landingGearMaterial);
+      rightMainlandingGear.position.set(25,-28,25);
+      //7.1.1 Add the axis for the landing gear
+        var LandingGearAxisGeometry = new THREE.BoxGeometry(10,10,6);
+        var LandingGearAxisMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.brown, shading:THREE.FlatShading});
+        var LandingGearAxis = new THREE.Mesh(LandingGearAxisGeometry,LandingGearAxisMaterial);
+        rightMainlandingGear.add(LandingGearAxis);
+      this.mesh.add(rightMainlandingGear);
+    //7.2 Clone right tire to make left landin gear
+      var leftMainlandingGear = rightMainlandingGear.clone();
+      leftMainlandingGear.position.z = -rightMainlandingGear.position.z;
+      this.mesh.add(leftMainlandingGear);
+    //7.3 Clone the right tire to make the rear landing gear
+      var rearlandingGear = rightMainlandingGear.clone();
+      //back gear is smaller than the front left and right
+      //scaling by a factor of .5 along x,y,z directions
+      rearlandingGear.scale.set(.5,.5,.5);
+      rearlandingGear.position.set(-35,-5,0);
+      this.mesh.add(rearlandingGear);
+    //7.4 Add the chock/cover for the right gear
+      var LandingGearChockGeometry = new THREE.BoxGeometry(30,15,10);
+      var LandingGearChockMaterial = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.red, shading:THREE.FlatShading});
+      var LandingGearRightChock = new THREE.Mesh(LandingGearChockGeometry,LandingGearChockMaterial);
+      LandingGearRightChock.position.set(25,-20,25);
+      this.mesh.add(LandingGearRightChock);
+    //7.5 Clone the rear wheel chock to make left chock
+      var LandingGearLeftChock = LandingGearRightChock.clone();  
+      LandingGearLeftChock.position.z = -LandingGearRightChock.position.z ;
+      this.mesh.add(LandingGearLeftChock);
 
-  var wheelTireGeom = new THREE.BoxGeometry(24,24,4);
-  var wheelTireMat = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.black, shading:THREE.FlatShading});
-  var wheelTireR = new THREE.Mesh(wheelTireGeom,wheelTireMat);
-  wheelTireR.position.set(25,-28,25);
-
-  var wheelAxisGeom = new THREE.BoxGeometry(10,10,6);
-  var wheelAxisMat = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.brown, shading:THREE.FlatShading});
-  var wheelAxis = new THREE.Mesh(wheelAxisGeom,wheelAxisMat);
-  wheelTireR.add(wheelAxis);
-
-  this.mesh.add(wheelTireR);
-
-  var wheelProtecL = wheelProtecR.clone();  
-  wheelProtecL.position.z = -wheelProtecR.position.z ;
-  this.mesh.add(wheelProtecL);
-
-  var wheelTireL = wheelTireR.clone();
-  wheelTireL.position.z = -wheelTireR.position.z;
-  this.mesh.add(wheelTireL);
-
-  var wheelTireB = wheelTireR.clone();
-  //back tire is smaller than the front left and right
-  //scaling by a  
-  wheelTireB.scale.set(.5,.5,.5);
-  wheelTireB.position.set(-35,-5,0);
-  this.mesh.add(wheelTireB);
-
-  var suspensionGeom = new THREE.BoxGeometry(4,20,4);
-  suspensionGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,10,0))
-  var suspensionMat = new THREE.MeshPhongMaterial({ emissiveIntensity: 0.9, color:usefulColours.red, shading:THREE.FlatShading});
-  var suspension = new THREE.Mesh(suspensionGeom,suspensionMat);
-  suspension.position.set(-35,-5,0);
-  suspension.rotation.z = -.3;
-  this.mesh.add(suspension);
-
-  // this.pilot = new Pilot();
-  // this.pilot.mesh.position.set(-10,27,0);
-  // this.mesh.add(this.pilot.mesh);
-
-
-  this.mesh.castShadow = true;
-  this.mesh.receiveShadow = true;
-
+ 
 };
 
 /* This function creates our aircraft. */ 
 function generateAircraft(){
   aircraft = new Aircraft();
+  //adjust the scale.. original aircraft became too big compared to the game environment
   aircraft.mesh.scale.set(.25,.25,.25);
+  //set the starting y corrdinate for the aircraft as the controller's default height
+  //this is used as a reference in updateAircraft()
   aircraft.mesh.position.y = controller.aircraftDefaultHeight;
   scene.add(aircraft.mesh);
 }
 
-/* This function is used to update the postion of the bullet.
+/* This function is used to update the postion of the aircraft
   Also, it handles the collision of aircraft with meteors
   and appropriately triggers the code for generating meteor
   fragments upon collision */ 
 function updateAircraft(){
+  //modify aircraft speed (relative to the screen) when the user moves the mouse in x direction
+  //the game window zooms in/out when mouse pointer is moved in x direction. to compensate for this
+  //we need to change aircraft speed
+  controller.aircraftSpeed = transformValue(currMousePtrLoc.x,-.5,.5,controller.minAircraftSpeed, controller.maxAircraftSpeed);
 
-  controller.aircraftSpeed = normalize(currMousePtrLoc.x,-.5,.5,controller.minAircraftSpeed, controller.maxAircraftSpeed);
-  var targetY = normalize(currMousePtrLoc.y,-.75,.75, controller.aircraftDefaultHeight-controller.aircraftAmplitudeHt, controller.aircraftDefaultHeight+controller.aircraftAmplitudeHt);
-  var targetX = normalize(currMousePtrLoc.x,-1,1,-controller.aircraftAmplitudeWdth*0.7, -controller.aircraftAmplitudeWdth);
-
+  //calculate the aircraft displacement along the x direction when mouse is moved horizontally
+  var targetX = transformValue(currMousePtrLoc.x,-1,1,-controller.aircraftAmplitudeWdth*0.7, -controller.aircraftAmplitudeWdth);
   controller.aircraftCollisionXDisplacement += controller.aircraftCollisionXSpeed;
   targetX += controller.aircraftCollisionXDisplacement;
 
-
+  //calculate the aircraft displacement along the y direction when mouse is moved vertically
+  var targetY = transformValue(currMousePtrLoc.y,-.75,.75, controller.aircraftDefaultHeight-controller.aircraftAmplitudeHt, controller.aircraftDefaultHeight+controller.aircraftAmplitudeHt);
   controller.aircraftCollisionYSpeed += controller.aircraftCollisionYSpeed;
   targetY += controller.aircraftCollisionYSpeed;
 
+  //displace the aircraft based on mouse movement. The factor dT is multiplied here because the faster
+  //the mouse is moved, faster should be the change in position of the aircraft.
+  //NOTE that dT is the time gap between successive animation frames.
   aircraft.mesh.position.y += (targetY-aircraft.mesh.position.y)*dT*controller.aircraftMovementSensi;
   aircraft.mesh.position.x += (targetX-aircraft.mesh.position.x)*dT*controller.aircraftMovementSensi;
 
+  //same for rotation of aircraft about the x axis and z axis. need to multiple by a factor of dT
   aircraft.mesh.rotation.z = (targetY-aircraft.mesh.position.y)*dT*controller.aircraftRotationXSensi;
   aircraft.mesh.rotation.x = (aircraft.mesh.position.y-targetY)*dT*controller.aircraftRotationZSensi;
-  var targetCameraZ = normalize(controller.aircraftSpeed, controller.minAircraftSpeed, controller.maxAircraftSpeed, controller.nearPosOfCamera, controller.farPosOfCamera);
-  perspCam.fov = normalize(currMousePtrLoc.x,-1,1,40, 80);
-  perspCam.updateProjectionMatrix ()
+  
+  //move the camera along the z direction when the aircraft's speed changes
+  var targetCameraZ = transformValue(controller.aircraftSpeed, controller.minAircraftSpeed, controller.maxAircraftSpeed, controller.nearPosOfCamera, controller.farPosOfCamera);
+  perspCam.fov = transformValue(currMousePtrLoc.x,-1,1,40, 80);
+  //call the below function for the above statement to take effect (for the fov field to get updated)
+  perspCam.updateProjectionMatrix();
+  //move the camera up/down along the aircraft's movement in y direction
   perspCam.position.y += (aircraft.mesh.position.y - perspCam.position.y)*dT*controller.cameraSensivity;
-
+  //increase the collision speed/displacement parameters with the passage of every animation frame.
   controller.aircraftCollisionXSpeed += (0-controller.aircraftCollisionXSpeed)*dT * 0.03;
   controller.aircraftCollisionXDisplacement += (0-controller.aircraftCollisionXDisplacement)*dT *0.01;
   controller.aircraftCollisionYSpeed += (0-controller.aircraftCollisionYSpeed)*dT * 0.03;
@@ -751,7 +693,7 @@ MeteorsHolder.prototype.rotateMeteors = function(){
       var meteor_planeSound = new Audio('sounds/rockBreaking.wav');
       meteor_planeSound.play();
       meteor_planeSound.volume = 1;
-      removeEnergy();
+      decreaseHealth();
       i--;
     }else if (meteor.angle > Math.PI){
       meteorsPool.unshift(this.meteorsInUse.splice(i,1)[0]);
@@ -896,7 +838,7 @@ JewelsHolder.prototype.rotateJewels = function(){
       this.jewelsPool.unshift(this.jewelsInUse.splice(i,1)[0]);
       this.mesh.remove(jewel.mesh);
       fragmentsHolder.spawnFragments(jewel.mesh.position.clone(), 5, 0x009999, .8);
-      addEnergy();
+      increaseHealth();
       var jewelSound = new Audio("sounds/jewel.mp3");
       jewelSound.play();
       jewelSound.volume = 0.6;
@@ -909,108 +851,14 @@ JewelsHolder.prototype.rotateJewels = function(){
   }
 }
 
-/* This function get executed at the beginning of each animation frame. 
-   In this function all objects (such as jewles, aircraft etc) gets updated
-    depending upon the current state of the game. */
-function loop(){
-  
-  currFrameTime = new Date().getTime();
-  dT = currFrameTime-prevFrameTime;
-  prevFrameTime = currFrameTime;
-  // checking current state of the game and performing actions depending upon them.
 
-  if(controller.stateOfGame == "notStarted"){
-      showStart();
-      controller.stateOfGame = "waitingForStart";
-  }
-  else if(controller.stateOfGame == "waitingForStart"){
-    
-  }
-  else if (controller.stateOfGame=="currentlyInGame"){
-    // Add health jewels for every 100m;
-    if (Math.floor(controller.pointsScored)%controller.jewelSpawnDistance == 0 && Math.floor(controller.pointsScored) > controller.lastSpawnOfJewel){
-      controller.lastSpawnOfJewel = Math.floor(controller.pointsScored);
-      jewelsHolder.spawnJewels();
-    }
-
-    // Increase speed to the aircraft
-    if (Math.floor(controller.pointsScored)%controller.distToUpdateSpeed == 0 && Math.floor(controller.pointsScored) > controller.lastUpdatedSpeed){
-      controller.lastUpdatedSpeed = Math.floor(controller.pointsScored);
-      controller.targetBaseSpeed += controller.increaseSpeedWithTime*dT;
-    }
-
-    // Add obstacles meteor for every 100m.
-    if (Math.floor(controller.pointsScored)%controller.meteorSpawnDistance == 0 && Math.floor(controller.pointsScored) > controller.lastSpawnOfMeteor){
-      controller.lastSpawnOfMeteor = Math.floor(controller.pointsScored);
-      meteorsHolder.spawnMeteors();
-    }
-
-    // increment stage variable and sound for level up.
-    if (Math.floor(controller.pointsScored)%controller.distanceForStageUpdate == 0 && Math.floor(controller.pointsScored) > controller.stageLastUpdate){
-      controller.stageLastUpdate = Math.floor(controller.pointsScored);
-      controller.stage++;
-      stageField.innerHTML = Math.floor(controller.stage);
-      controller.bulletCount = controller.stage * 2;
-      bulletVal.innerHTML = Math.floor(controller.bulletCount);
-      controller.targetBaseSpeed = controller.startSpeed + controller.increaseSpeedWithLevel*controller.stage;
-      var levelUp = new Audio("sounds/levelUp.mp3");
-      levelUp.play();
-      levelUp.volume = 1;
-
-    }
-
-
-    updateAircraft();
-    updatePoints();
-    updateEnergy();
-    updateBullet();
-    
-    // increasing speed of aircraft.
-    controller.baseSpeed += (controller.targetBaseSpeed - controller.baseSpeed)* 0.02 * dT;
-    controller.speed = controller.baseSpeed * controller.aircraftSpeed;
-
-  }else if(controller.stateOfGame=="gameIsOver"){   // when game gets over show message and await for restart.
-    controller.speed *= .99;
-    aircraft.mesh.rotation.z += (-Math.PI/2 - aircraft.mesh.rotation.z)*.0002*dT;
-    aircraft.mesh.rotation.x += 0.0003*dT;
-    controller.aircraftFallSpeed *= 1.05;
-    aircraft.mesh.position.y -= controller.aircraftFallSpeed*dT;
-
-    if (aircraft.mesh.position.y <-200){
-      showReplay();
-      controller.stateOfGame = "awaitingGameRestart";
-
-    }
-  }else if (controller.stateOfGame=="awaitingGameRestart"){
-
-  }
-
-  // updating aircraft rotation.
-  aircraft.rotor.rotation.x +=.2 + controller.aircraftSpeed * dT*.005;
-  
-  // updating ocean. 
-  ocean.mesh.rotation.z += controller.speed*dT;
-
-  if ( ocean.mesh.rotation.z > 2*Math.PI)  
-      ocean.mesh.rotation.z -= 2*Math.PI;
-
-  ambLight.intensity += (.5 - ambLight.intensity)*dT*0.005;
-
-  // moving jewels.
-  jewelsHolder.rotateJewels();
-  meteorsHolder.rotateMeteors();
-
-  // moving environment variables
-  sky.moveClouds();
-  ocean.moveWaves();
-
-  //rendering scene in webgl using prepective projection camera.
-  webGlRenderer.render(scene, perspCam);
-  requestAnimationFrame(loop);
-}
+/**********************************************************
+ * ** FUNCTIONS FOR UPDATING POINTS/HEALTH RELATED INFO ***
+ * ********************************************************
+ */
 
 /* This function updates points scored in game. */
-function updatePoints(){
+function changePoints(){
   controller.pointsScored += controller.speed*dT*controller.ratioOfSpeedDistance;
   currPoints.innerHTML = Math.floor(controller.pointsScored);
   var incrementPoints = 502*(1-(controller.pointsScored%controller.distanceForStageUpdate)/controller.distanceForStageUpdate);
@@ -1018,14 +866,20 @@ function updatePoints(){
 }
 
 /* This function updates health of the aircraft. */
-function updateEnergy(){
+function changeHealth(){
   controller.health -= controller.speed*dT*controller.ratioOfSpeedEnergy;
   controller.health = Math.max(0, controller.health); // updating health value.
   healthMeterFill.style.right = (100-controller.health)+"%"; //stylng health meter.
-  healthMeterFill.style.backgroundColor = (controller.health<50)? "#f25346" : "#68c3c0"; //updating bg colour for health.
-
+  //updating bg colour for health.
+  if(controller.health<50){
+    healthMeterFill.style.backgroundColor =  "#00ffff";
+  }
+  else{
+    healthMeterFill.style.backgroundColor = "#66cdaa";
+  }
   if (controller.health<30){
-    healthMeterFill.style.animationName = "blinking";
+    healthMeterFill.style.backgroundColor = "#f25346";
+    healthMeterFill.style.animationName = "flickering";
   }else{
     healthMeterFill.style.animationName = "none";
   }
@@ -1039,42 +893,46 @@ function updateEnergy(){
 }
 
 /* This function increments the health of the aircraft when it collects points. */
-function addEnergy(){
+function increaseHealth(){
   controller.health += controller.valueOfJewel;
   controller.health = Math.min(controller.health, 100);
 }
 
 /* This function decreases health of the aircraft when it hits any meteor obstacle. */
-function removeEnergy(){
+function decreaseHealth(){
   controller.health -= controller.healthLossByMeteor;
   controller.health = Math.max(0, controller.health);
 }
 
-/***********These functions are used for showing messages on the screen at different states of the game. */ 
+/**
+ * *****************************************************************************************************
+ * The following 4 functions are used for showing messages on the screen at different states of the game. 
+ * ****************************************************************************************************
+ * */ 
 function showReplay(){
+  //blocking display
   replayMessage.style.display="block";
 }
-
 function hideReplay(){
   replayMessage.style.display="none";
 }
-
 function showStart(){
+  //blocking display
   startMessage.style.display="block";
 }
-
 function hideStart(){
   startMessage.style.display="none";
 }
 
-/* This function normalises world co-ordinates to the co-ordinates in window frame.(window - viewport transformation). */
-function normalize(v,vmin,vmax,tmin, tmax){
-  var nv = Math.max(Math.min(v,vmax), vmin);  //normalizing the X/Y position of mouse by constraining it between vmin and vmax
-  var dv = vmax-vmin;
-  var pc = (nv-vmin)/dv;
-  var dt = tmax-tmin;
-  var tv = tmin + (pc*dt);
-  return tv;
+/* This function normalizes/transforms the value 'value' (that lies in range minValue,maxValue)
+  into a value that lies in the target range (minTarget, maxTarget) */
+function transformValue(value,minValue,maxValue,minTarget, maxTarget){
+  var newValue = Math.max(Math.min(value,maxValue), minValue);  //normalizing the X/Y position of mouse by constraining it between vmin and vmax
+  var rangeValues = maxValue-minValue;
+  var positionChange = (newValue-minValue)/rangeValues;
+  var targetChange = maxTarget-minTarget;
+  var transformedValue = minTarget + (positionChange*targetChange);
+  return transformedValue;
 }
 
 
@@ -1123,5 +981,175 @@ function init(event){
   loop();
   
 }
-
 window.addEventListener('load', init, false);
+
+
+/* This function get executed at the beginning of each animation frame. 
+   In this function all objects (such as jewles, aircraft etc) gets updated
+    depending upon the current state of the game. */
+function loop(){
+
+  currFrameTime = new Date().getTime();
+  dT = currFrameTime-prevFrameTime;
+  prevFrameTime = currFrameTime;
+  // checking current state of the game and performing actions depending upon them.
+
+  if(controller.stateOfGame == "notStarted"){
+      showStart();
+      controller.stateOfGame = "waitingForStart";
+  }
+  else if(controller.stateOfGame == "waitingForStart"){
+    
+  }
+  else if (controller.stateOfGame=="currentlyInGame"){
+    // Add health jewels for every 100m;
+    if (Math.floor(controller.pointsScored)%controller.jewelSpawnDistance == 0 && Math.floor(controller.pointsScored) > controller.lastSpawnOfJewel){
+      controller.lastSpawnOfJewel = Math.floor(controller.pointsScored);
+      jewelsHolder.spawnJewels();
+    }
+
+    // Increase speed to the aircraft
+    if (Math.floor(controller.pointsScored)%controller.distToUpdateSpeed == 0 && Math.floor(controller.pointsScored) > controller.lastUpdatedSpeed){
+      controller.lastUpdatedSpeed = Math.floor(controller.pointsScored);
+      controller.targetBaseSpeed += controller.increaseSpeedWithTime*dT;
+    }
+
+    // Add obstacles meteor for every 100m.
+    if (Math.floor(controller.pointsScored)%controller.meteorSpawnDistance == 0 && Math.floor(controller.pointsScored) > controller.lastSpawnOfMeteor){
+      controller.lastSpawnOfMeteor = Math.floor(controller.pointsScored);
+      meteorsHolder.spawnMeteors();
+    }
+
+    // increment stage variable and sound for level up.
+    if (Math.floor(controller.pointsScored)%controller.distanceForStageUpdate == 0 && Math.floor(controller.pointsScored) > controller.stageLastUpdate){
+      controller.stageLastUpdate = Math.floor(controller.pointsScored);
+      controller.stage++;
+      stageField.innerHTML = Math.floor(controller.stage);
+      controller.bulletCount = controller.stage * 2;
+      bulletVal.innerHTML = Math.floor(controller.bulletCount);
+      controller.targetBaseSpeed = controller.startSpeed + controller.increaseSpeedWithLevel*controller.stage;
+      var levelUp = new Audio("sounds/levelUp.mp3");
+      levelUp.play();
+      levelUp.volume = 1;
+
+    }
+
+
+    updateAircraft();
+    changePoints();
+    changeHealth();
+    updateBullet();
+    
+    // increasing speed of aircraft.
+    controller.baseSpeed += (controller.targetBaseSpeed - controller.baseSpeed)* 0.02 * dT;
+    controller.speed = controller.baseSpeed * controller.aircraftSpeed;
+
+  }else if(controller.stateOfGame=="gameIsOver"){   // when game gets over show message and await for restart.
+    controller.speed *= .99;
+    aircraft.mesh.rotation.z += (-Math.PI/2 - aircraft.mesh.rotation.z)*.0002*dT;
+    aircraft.mesh.rotation.x += 0.0003*dT;
+    controller.aircraftFallSpeed *= 1.05;
+    aircraft.mesh.position.y -= controller.aircraftFallSpeed*dT;
+
+    if (aircraft.mesh.position.y <-200){
+      showReplay();
+      controller.stateOfGame = "awaitingGameRestart";
+
+    }
+  }else if (controller.stateOfGame=="awaitingGameRestart"){
+
+  }
+
+  // updating aircraft rotation.
+  aircraft.rotor.rotation.x +=.2 + controller.aircraftSpeed * dT*.005;
+  
+  // updating ocean. 
+  ocean.mesh.rotation.z += controller.speed*dT;
+
+  if ( ocean.mesh.rotation.z > 2*Math.PI)  
+      ocean.mesh.rotation.z -= 2*Math.PI;
+
+  ambLight.intensity += (.5 - ambLight.intensity)*dT*0.005;
+
+  // moving jewels.
+  jewelsHolder.rotateJewels();
+  meteorsHolder.rotateMeteors();
+
+  // moving environment variables
+  sky.moveClouds();
+  ocean.moveWaves();
+
+  //rendering scene in webgl using prepective projection camera.
+  webGlRenderer.render(scene, perspCam);
+  requestAnimationFrame(loop);
+}
+  
+
+
+/* *
+ * FUNCTIONS FOR HANDLING ON SCREEN MOUSE/KEYBOARD EVENTS
+ * These functions are passed as callbacks to the event listeners 
+*/  
+
+/* Handles resizing of the window  */
+ function windowSizeChangeHandler() {
+  webGlRenderer.setSize(WIDTH, HEIGHT);
+  perspCam.aspect = WIDTH / HEIGHT;
+  //need to call the below function for the 
+  //attribute changes to take effect 
+  perspCam.updateProjectionMatrix();
+}
+
+/* Handles movement of mouse pointer  */
+function mousePtrMoveHandler(){
+  var adjustedX = (event.clientX / WIDTH)*2;
+  adjustedX--;
+  var adjustedY = (event.clientY / HEIGHT)*(-2);
+  adjustedY++;
+  currMousePtrLoc = {x:adjustedX, y:adjustedY};
+}
+
+/* Handles release of mouse click */
+function mouseClickReleaseHandler(event){
+  if (controller.stateOfGame == "awaitingGameRestart"){
+    hideReplay();
+    generateNewGame();
+  }
+}
+
+/* Handles pressing of a button on the keyboard  */
+function keyButtonPressHandler(event){
+  if (controller.stateOfGame == "awaitingGameRestart"){
+    generateNewGame();
+    controller.stateOfGame = "currentlyInGame";
+    hideReplay();
+  }
+  else if(controller.stateOfGame == "waitingForStart"){
+    hideStart();
+    generateNewGame();
+    var bgAudio = document.getElementById("backAudio");
+    if(bgAudio.canPlayType('audio/mp3')){
+      bgAudio.setAttribute('src','sounds/background.mp3');
+      console.log("WORKING");  
+      bgAudio.play();
+      //oye..vs code on he na
+      bgAudio.volume = 0.5;
+    }
+    controller.stateOfGame = "currentlyInGame";
+  }
+  else if(controller.stateOfGame == "currentlyInGame"){
+    if(canFireBullet == 1 && event.key == "x"){
+      generateBullet();
+      //console.log("\nheree");
+      canFireBullet = 0;
+    }
+  }
+}
+
+/* Handles releasing of a button on the keyboard  */
+function keyButtonReleaseHandler(event){
+  if(event.key == "x"){
+    canFireBullet = 1;
+  }
+}
+

@@ -117,7 +117,7 @@ it shows the remaining amount of health the player has*/
 .healthMeter {
 	position: relative;
 	border-radius: 3px;
-	background-color: #d1b790;
+	background-color: #eeebe7;
 	margin-top: 20px;
 	color: #4d0049;
 	width: 60px;
@@ -193,7 +193,7 @@ instructions on the screen*/
 .howToPlay {
 	position: absolute;
 	margin-top: 87vh ;
-	margin-left: 69vh;
+	margin-left: 55vh;
 	text-align: center;
 	font-weight: bold;
 	font-style: oblique;
@@ -228,24 +228,10 @@ on the screen- Press X to fire*/
 	background: linear-gradient(rgb(134, 180, 159), rgb(192, 115, 43));
 }
 
-@-webkit-keyframes blinking {
+/*This keyframe animation effect is used for creating
+a flickering effect when health is low on health bar*/
+@keyframes flickering {
 	0% { opacity: 1; }
 	50% { opacity: 0; }
 	100% { opacity: 1; }
-}
-
-@keyframes blinking {
-	0% { opacity: 1; }
-	50% { opacity: 0; }
-	100% { opacity: 1; }
-}
-
-@media screen and (max-width: 40em) {
-	.header {
-		font-size: 0.75em;
-		top: 6.5em;
-	}
-	.header h2 {
-		letter-spacing: 0.65em;
-	}
 }
