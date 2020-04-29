@@ -1115,6 +1115,19 @@ function mouseClickReleaseHandler(event){
     hideReplay();
     generateNewGame();
   }
+  else if(controller.stateOfGame == "waitingForStart"){
+    hideStart();
+    generateNewGame();
+    var bgAudio = document.getElementById("backAudio");
+    if(bgAudio.canPlayType('audio/mp3')){
+      bgAudio.setAttribute('src','sounds/background.mp3');
+      console.log("WORKING");  
+      bgAudio.play();
+      //oye..vs code on he na
+      bgAudio.volume = 0.5;
+    }
+    controller.stateOfGame = "currentlyInGame";
+  }
 }
 
 /* Handles pressing of a button on the keyboard  */

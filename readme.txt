@@ -16,6 +16,6 @@ This game is made using WebGL (JavaScript,HTML,CSS and Three JS(a framework for 
 
 
 INSTRUCTIONS FOR PLAYING GAME:-
-    Aircraft will move in accordence with the motion of your cursor.
+    Aircraft will move in accordence with the motion of your mouse cursor.
     To fire bullets press key 'x' in the keyboard. But remember number of bullets are limited and are restricted to certain value.
     You have to avoid the enemy Meteors and collects gems for refueling your health. Travel as long as you can without loss of health.
