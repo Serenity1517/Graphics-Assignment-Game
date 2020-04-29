@@ -1,3 +1,4 @@
+/*Outermost class containing all the elements*/
 .mainClass {
 	position: absolute;
 	width: 100%;
@@ -6,6 +7,9 @@
 	background: linear-gradient(#ADD8E6, #87CEFA);
 }
 
+/*This containter contains the game's elements - plane, sky, clouds 
+id value for this is = "mainScene"
+this can be accessed in game.js using document.getElementById()*/
 .mainScene {
 	position: absolute;
 	overflow: hidden;
